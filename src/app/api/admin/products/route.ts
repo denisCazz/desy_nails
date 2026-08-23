@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { eq } from "drizzle-orm";
 import { unauthorizedIfGuest } from "@/lib/admin-api";
 import { getDb } from "@/lib/db";
 import { products } from "@/lib/db/schema";
@@ -23,22 +24,25 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Nome e prezzo obbligatori" }, { status: 400 });
   }
 
+  const id = slugId();
   const db = getDb();
-  const inserted = await db
-    .insert(products)
-    .values({
-      id: slugId(),
-      name: body.name,
-      description: body.description ?? "",
-      priceCents,
-      shape: body.shape ?? "almond",
-      length: body.length ?? "M",
-      colors: JSON.stringify(parseColorList(body.colors)),
-      imageUrl: body.imageUrl ?? "",
-      active: true,
-      sortOrder: Date.now(),
-    })
-    .returning();
+  await db.insert(products).values({
+    id,
+    name: body.name,
+    description: body.description ?? "",
+    priceCents,
+    shape: body.shape ?? "almond",
+    length: body.length ?? "M",
+    colors: JSON.stringify(parseColorList(body.colors)),
+    imageUrl: body.imageUrl ?? "",
+    active: true,
+    sortOrder: Date.now(),
+  });
+  const [product] = await db
+    .select()
+    .from(products)
+    .where(eq(products.id, id))
+    .limit(1);
 
-  return NextResponse.json({ product: inserted[0] });
+  return NextResponse.json({ product });
 }

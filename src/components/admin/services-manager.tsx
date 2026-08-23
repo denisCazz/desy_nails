@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { Service } from "@/lib/db/schema";
 import { centsToEuroInput, formatPrice } from "@/lib/format";
+import { AdminDialog } from "./admin-dialog";
 
 function payloadFromForm(form: FormData) {
   return {
@@ -79,17 +80,21 @@ function ServiceFields({ service }: { service?: Service }) {
 
 export function ServicesManager({ services }: { services: Service[] }) {
   const [rows, setRows] = useState(services);
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [dialog, setDialog] = useState<"create" | Service | null>(null);
   const [error, setError] = useState("");
+
+  function closeDialog() {
+    setDialog(null);
+    setError("");
+  }
 
   async function createService(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
-    const payload = payloadFromForm(new FormData(event.currentTarget));
     const res = await fetch("/api/admin/services", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(payloadFromForm(new FormData(event.currentTarget))),
     });
     const data = (await res.json()) as { service?: Service; error?: string };
     if (!res.ok || !data.service) {
@@ -97,17 +102,16 @@ export function ServicesManager({ services }: { services: Service[] }) {
       return;
     }
     setRows((current) => [...current, data.service!].sort((a, b) => a.sortOrder - b.sortOrder));
-    event.currentTarget.reset();
+    closeDialog();
   }
 
   async function saveService(id: string, event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
-    const payload = payloadFromForm(new FormData(event.currentTarget));
     const res = await fetch(`/api/admin/services/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(payloadFromForm(new FormData(event.currentTarget))),
     });
     const data = (await res.json()) as { service?: Service; error?: string };
     if (!res.ok || !data.service) {
@@ -115,7 +119,7 @@ export function ServicesManager({ services }: { services: Service[] }) {
       return;
     }
     setRows((current) => current.map((row) => (row.id === id ? data.service! : row)));
-    setEditingId(null);
+    closeDialog();
   }
 
   async function removeService(id: string) {
@@ -123,7 +127,7 @@ export function ServicesManager({ services }: { services: Service[] }) {
     const res = await fetch(`/api/admin/services/${id}`, { method: "DELETE" });
     if (res.ok) {
       setRows((current) => current.filter((row) => row.id !== id));
-      if (editingId === id) setEditingId(null);
+      if (typeof dialog !== "string" && dialog?.id === id) closeDialog();
     }
   }
 
@@ -143,8 +147,23 @@ export function ServicesManager({ services }: { services: Service[] }) {
     }
   }
 
+  const editing = dialog && dialog !== "create" ? dialog : null;
+
   return (
-    <div className="grid gap-8 lg:grid-cols-[1fr_0.8fr]">
+    <div className="space-y-6">
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={() => {
+            setError("");
+            setDialog("create");
+          }}
+          className="rounded-full bg-gold px-5 py-2.5 text-[#3a2c2e]"
+        >
+          Nuovo servizio
+        </button>
+      </div>
+
       <ul className="space-y-3">
         {rows.map((service) => (
           <li key={service.id} className="gold-border rounded-2xl bg-surface p-4">
@@ -162,10 +181,13 @@ export function ServicesManager({ services }: { services: Service[] }) {
               <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
-                  onClick={() => setEditingId((current) => (current === service.id ? null : service.id))}
+                  onClick={() => {
+                    setError("");
+                    setDialog(service);
+                  }}
                   className="rounded-full border border-line px-3 py-1 text-xs"
                 >
-                  {editingId === service.id ? "Annulla" : "Modifica"}
+                  Modifica
                 </button>
                 <button
                   type="button"
@@ -183,26 +205,33 @@ export function ServicesManager({ services }: { services: Service[] }) {
                 </button>
               </div>
             </div>
-            {editingId === service.id ? (
-              <form onSubmit={(event) => saveService(service.id, event)} className="mt-4 space-y-3">
-                <ServiceFields key={service.id} service={service} />
-                <button type="submit" className="w-full rounded-full bg-gold py-2.5 text-[#3a2c2e]">
-                  Salva modifiche
-                </button>
-              </form>
-            ) : null}
           </li>
         ))}
       </ul>
 
-      <form onSubmit={createService} className="gold-border h-fit space-y-3 rounded-2xl bg-surface p-5">
-        <h3 className="font-serif text-2xl text-mauve">Nuovo servizio</h3>
-        <ServiceFields />
-        <button type="submit" className="w-full rounded-full bg-gold py-2.5 text-[#3a2c2e]">
-          Aggiungi
-        </button>
-        {error ? <p className="text-sm text-rose">{error}</p> : null}
-      </form>
+      {dialog === "create" ? (
+        <AdminDialog title="Nuovo servizio" onClose={closeDialog}>
+          <form onSubmit={createService} className="space-y-3">
+            <ServiceFields />
+            <button type="submit" className="w-full rounded-full bg-gold py-2.5 text-[#3a2c2e]">
+              Aggiungi
+            </button>
+            {error ? <p className="text-sm text-rose">{error}</p> : null}
+          </form>
+        </AdminDialog>
+      ) : null}
+
+      {editing ? (
+        <AdminDialog title="Modifica servizio" onClose={closeDialog}>
+          <form onSubmit={(event) => saveService(editing.id, event)} className="space-y-3">
+            <ServiceFields key={editing.id} service={editing} />
+            <button type="submit" className="w-full rounded-full bg-gold py-2.5 text-[#3a2c2e]">
+              Salva modifiche
+            </button>
+            {error ? <p className="text-sm text-rose">{error}</p> : null}
+          </form>
+        </AdminDialog>
+      ) : null}
     </div>
   );
 }

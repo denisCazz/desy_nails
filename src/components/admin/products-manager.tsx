@@ -5,6 +5,7 @@ import type { Product } from "@/lib/db/schema";
 import { centsToEuroInput, formatPrice } from "@/lib/format";
 import { parseColors } from "../nail-set-preview";
 import { ProductMedia } from "../product-media";
+import { AdminDialog } from "./admin-dialog";
 import { ColorPickerList } from "./color-picker-list";
 
 async function uploadImage(file: File | null, previousUrl = "") {
@@ -114,15 +115,18 @@ function ProductFields({ product }: { product?: Product }) {
 
 export function ProductsManager({ products }: { products: Product[] }) {
   const [rows, setRows] = useState(products);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [formKey, setFormKey] = useState(0);
+  const [dialog, setDialog] = useState<"create" | Product | null>(null);
   const [error, setError] = useState("");
+
+  function closeDialog() {
+    setDialog(null);
+    setError("");
+  }
 
   async function createProduct(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
-    const form = event.currentTarget;
-    const data = new FormData(form);
+    const data = new FormData(event.currentTarget);
     try {
       const imageUrl = await uploadImage(data.get("image") as File | null);
       const res = await fetch("/api/admin/products", {
@@ -136,8 +140,7 @@ export function ProductsManager({ products }: { products: Product[] }) {
         return;
       }
       setRows((current) => [...current, json.product!]);
-      form.reset();
-      setFormKey((key) => key + 1);
+      closeDialog();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Impossibile aggiungere il set.");
     }
@@ -161,7 +164,7 @@ export function ProductsManager({ products }: { products: Product[] }) {
         return;
       }
       setRows((current) => current.map((row) => (row.id === product.id ? json.product! : row)));
-      setEditingId(null);
+      closeDialog();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Impossibile salvare il set.");
     }
@@ -172,12 +175,27 @@ export function ProductsManager({ products }: { products: Product[] }) {
     const res = await fetch(`/api/admin/products/${id}`, { method: "DELETE" });
     if (res.ok) {
       setRows((current) => current.filter((row) => row.id !== id));
-      if (editingId === id) setEditingId(null);
+      if (typeof dialog !== "string" && dialog?.id === id) closeDialog();
     }
   }
 
+  const editing = dialog && dialog !== "create" ? dialog : null;
+
   return (
-    <div className="grid gap-8 lg:grid-cols-[1fr_0.85fr]">
+    <div className="space-y-6">
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={() => {
+            setError("");
+            setDialog("create");
+          }}
+          className="rounded-full bg-gold px-5 py-2.5 text-[#3a2c2e]"
+        >
+          Nuovo set
+        </button>
+      </div>
+
       <ul className="grid gap-4 sm:grid-cols-2">
         {rows.map((product) => (
           <li key={product.id} className="gold-border overflow-hidden rounded-2xl bg-surface">
@@ -188,10 +206,13 @@ export function ProductsManager({ products }: { products: Product[] }) {
               <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
-                  onClick={() => setEditingId((current) => (current === product.id ? null : product.id))}
+                  onClick={() => {
+                    setError("");
+                    setDialog(product);
+                  }}
                   className="rounded-full border border-line px-3 py-1 text-sm"
                 >
-                  {editingId === product.id ? "Annulla" : "Modifica"}
+                  Modifica
                 </button>
                 <button
                   type="button"
@@ -201,31 +222,34 @@ export function ProductsManager({ products }: { products: Product[] }) {
                   Rimuovi
                 </button>
               </div>
-              {editingId === product.id ? (
-                <form onSubmit={(event) => saveProduct(product, event)} className="space-y-3 pt-2">
-                  <ProductFields key={product.id} product={product} />
-                  <button type="submit" className="w-full rounded-full bg-gold py-2.5 text-[#3a2c2e]">
-                    Salva modifiche
-                  </button>
-                </form>
-              ) : null}
             </div>
           </li>
         ))}
       </ul>
 
-      <form
-        key={formKey}
-        onSubmit={createProduct}
-        className="gold-border h-fit space-y-3 rounded-2xl bg-surface p-5"
-      >
-        <h3 className="font-serif text-2xl text-mauve">Nuovo set</h3>
-        <ProductFields />
-        <button type="submit" className="w-full rounded-full bg-gold py-3 text-[#3a2c2e]">
-          Aggiungi set
-        </button>
-        {error ? <p className="text-base text-rose">{error}</p> : null}
-      </form>
+      {dialog === "create" ? (
+        <AdminDialog title="Nuovo set" onClose={closeDialog}>
+          <form onSubmit={createProduct} className="space-y-3">
+            <ProductFields />
+            <button type="submit" className="w-full rounded-full bg-gold py-3 text-[#3a2c2e]">
+              Aggiungi set
+            </button>
+            {error ? <p className="text-base text-rose">{error}</p> : null}
+          </form>
+        </AdminDialog>
+      ) : null}
+
+      {editing ? (
+        <AdminDialog title="Modifica set" onClose={closeDialog}>
+          <form onSubmit={(event) => saveProduct(editing, event)} className="space-y-3">
+            <ProductFields key={editing.id} product={editing} />
+            <button type="submit" className="w-full rounded-full bg-gold py-2.5 text-[#3a2c2e]">
+              Salva modifiche
+            </button>
+            {error ? <p className="text-base text-rose">{error}</p> : null}
+          </form>
+        </AdminDialog>
+      ) : null}
     </div>
   );
 }
