@@ -24,7 +24,7 @@ export const services = mysqlTable(
     bookable: boolean("bookable").notNull().default(true),
     active: boolean("active").notNull().default(true),
     sortOrder: int("sort_order").notNull().default(0),
-    createdAt: datetime("created_at", { mode: "date", fsp: 3 }).notNull().defaultNow(),
+    createdAt: datetime("created_at", { mode: "date", fsp: 3 }).notNull().$defaultFn(() => new Date()),
   },
   (table) => [index("idx_services_category").on(table.category, table.sortOrder)],
 );
@@ -39,7 +39,7 @@ export const orders = mysqlTable(
     notes: text("notes").notNull(),
     status: varchar("status", { length: 32 }).notNull().default("new"),
     totalCents: int("total_cents").notNull().default(0),
-    createdAt: datetime("created_at", { mode: "date", fsp: 3 }).notNull().defaultNow(),
+    createdAt: datetime("created_at", { mode: "date", fsp: 3 }).notNull().$defaultFn(() => new Date()),
   },
   (table) => [index("idx_orders_created").on(table.createdAt)],
 );
@@ -57,7 +57,7 @@ export const products = mysqlTable(
     imageUrl: varchar("image_url", { length: 512 }).notNull().default(""),
     active: boolean("active").notNull().default(true),
     sortOrder: int("sort_order").notNull().default(0),
-    createdAt: datetime("created_at", { mode: "date", fsp: 3 }).notNull().defaultNow(),
+    createdAt: datetime("created_at", { mode: "date", fsp: 3 }).notNull().$defaultFn(() => new Date()),
   },
   (table) => [index("idx_products_sort").on(table.sortOrder)],
 );
@@ -101,7 +101,7 @@ export const bookings = mysqlTable(
     status: varchar("status", { length: 32 }).notNull().default("pending"),
     source: varchar("source", { length: 32 }).notNull().default("site"),
     icalUid: varchar("ical_uid", { length: 255 }),
-    createdAt: datetime("created_at", { mode: "date", fsp: 3 }).notNull().defaultNow(),
+    createdAt: datetime("created_at", { mode: "date", fsp: 3 }).notNull().$defaultFn(() => new Date()),
   },
   (table) => [
     index("idx_bookings_start").on(table.startAt),
@@ -118,7 +118,7 @@ export const blockedSlots = mysqlTable(
     endAt: datetime("end_at", { mode: "date", fsp: 3 }).notNull(),
     source: varchar("source", { length: 32 }).notNull().default("admin"),
     icalUid: varchar("ical_uid", { length: 255 }).unique(),
-    createdAt: datetime("created_at", { mode: "date", fsp: 3 }).notNull().defaultNow(),
+    createdAt: datetime("created_at", { mode: "date", fsp: 3 }).notNull().$defaultFn(() => new Date()),
   },
   (table) => [index("idx_blocked_start").on(table.startAt)],
 );
