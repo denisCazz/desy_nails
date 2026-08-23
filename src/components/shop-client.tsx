@@ -4,7 +4,7 @@ import { useState } from "react";
 import { formatPrice } from "@/lib/format";
 import type { Product } from "@/lib/db/schema";
 import { useCart } from "./cart-provider";
-import { NailSetPreview, parseColors } from "./nail-set-preview";
+import { ProductMedia } from "./product-media";
 
 const shapeLabel: Record<string, string> = {
   almond: "Mandorla",
@@ -49,7 +49,7 @@ export function ShopClient({ products }: { products: Product[] }) {
       <div className="grid gap-6 sm:grid-cols-2">
         {products.map((product) => (
           <article key={product.id} className="gold-border overflow-hidden rounded-3xl bg-surface">
-            <NailSetPreview colors={parseColors(product.colors)} shape={product.shape} />
+            <ProductMedia product={product} className="h-52" />
             <div className="space-y-3 p-5">
               <div className="flex items-start justify-between gap-3">
                 <h3 className="font-serif text-xl text-mauve">{product.name}</h3>

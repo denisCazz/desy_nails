@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
+import { eq } from "drizzle-orm";
 import { unauthorizedIfGuest } from "@/lib/admin-api";
 import { getDb } from "@/lib/db";
 import { services } from "@/lib/db/schema";
-import { slugId } from "@/lib/format";
+import { eurosToCents, slugId } from "@/lib/format";
 
 export async function POST(request: Request) {
   const denied = await unauthorizedIfGuest();
@@ -24,30 +25,29 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Nome obbligatorio" }, { status: 400 });
   }
 
-  const priceCents =
-    body.priceEuros === "" || body.priceEuros == null
-      ? null
-      : Math.round(Number(body.priceEuros) * 100);
+  const priceCents = eurosToCents(body.priceEuros);
 
   const id = slugId();
   const db = getDb();
-  const inserted = await db
-    .insert(services)
-    .values({
-      id,
-      name: body.name,
-      description: body.description ?? "",
-      category: body.category ?? "servizi",
-      priceCents,
-      priceFrom: Boolean(body.priceFrom),
-      isAddon: Boolean(body.isAddon),
-      priceNote: body.priceNote ?? "",
-      durationMinutes: body.durationMinutes || 60,
-      bookable: body.bookable ?? true,
-      active: true,
-      sortOrder: Date.now(),
-    })
-    .returning();
+  await db.insert(services).values({
+    id,
+    name: body.name,
+    description: body.description ?? "",
+    category: body.category ?? "servizi",
+    priceCents,
+    priceFrom: Boolean(body.priceFrom),
+    isAddon: Boolean(body.isAddon),
+    priceNote: body.priceNote ?? "",
+    durationMinutes: body.durationMinutes || 60,
+    bookable: body.bookable ?? true,
+    active: true,
+    sortOrder: Date.now(),
+  });
+  const [service] = await db
+    .select()
+    .from(services)
+    .where(eq(services.id, id))
+    .limit(1);
 
-  return NextResponse.json({ service: inserted[0] });
+  return NextResponse.json({ service });
 }

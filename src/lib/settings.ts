@@ -16,6 +16,11 @@ export const DEFAULT_WORKING_HOURS: WorkingHours = {
 };
 
 export async function getSetting(key: string, fallback = "") {
+  // `next build` prerenders `/_not-found` (and the root layout/footer) without
+  // Coolify/runtime env. Reads must not require DATABASE_URL at build time.
+  if (!process.env.DATABASE_URL) {
+    return fallback;
+  }
   const db = getDb();
   const rows = await db
     .select()
@@ -30,10 +35,13 @@ export async function setSetting(key: string, value: string) {
   await db
     .insert(settings)
     .values({ key, value })
-    .onConflictDoUpdate({ target: settings.key, set: { value } });
+    .onDuplicateKeyUpdate({ set: { value } });
 }
 
 export async function getAllSettings() {
+  if (!process.env.DATABASE_URL) {
+    return {} as Record<string, string>;
+  }
   const db = getDb();
   const rows = await db.select().from(settings);
   return Object.fromEntries(rows.map((row) => [row.key, row.value])) as Record<

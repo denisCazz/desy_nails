@@ -2,7 +2,7 @@ import { drizzle } from "drizzle-orm/mysql2";
 import mysql from "mysql2/promise";
 import * as schema from "./schema";
 
-type Db = ReturnType<typeof drizzle<typeof schema>>;
+type Db = ReturnType<typeof drizzle<typeof schema, mysql.Pool>>;
 
 const globalForDb = globalThis as unknown as {
   mysql?: mysql.Pool;
@@ -15,17 +15,19 @@ export function getDb(): Db {
     throw new Error("DATABASE_URL non configurato");
   }
 
-  if (!globalForDb.mysql) {
-    globalForDb.mysql = mysql.createPool({
+  const pool =
+    globalForDb.mysql ??
+    mysql.createPool({
       uri: url,
       waitForConnections: true,
       connectionLimit: 4,
       timezone: "Z",
       dateStrings: false,
     });
-  }
+  globalForDb.mysql = pool;
+
   if (!globalForDb.db) {
-    globalForDb.db = drizzle(globalForDb.mysql, { schema, mode: "default" });
+    globalForDb.db = drizzle(pool, { schema, mode: "default" });
   }
   return globalForDb.db;
 }
