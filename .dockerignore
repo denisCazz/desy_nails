@@ -1,0 +1,10 @@
+node_modules
+.next
+.git
+data
+*.md
+IMG_*.PNG
+IMG_*.jpg
+hero_sito
+.env
+.env.local
