@@ -1,114 +1,107 @@
 import {
   boolean,
+  datetime,
   index,
-  integer,
-  jsonb,
-  pgTable,
+  int,
+  json,
+  mysqlTable,
   text,
-  timestamp,
-} from "drizzle-orm/pg-core";
+  varchar,
+} from "drizzle-orm/mysql-core";
 
-export const services = pgTable(
+export const services = mysqlTable(
   "services",
   {
-    id: text("id").primaryKey(),
-    name: text("name").notNull(),
+    id: varchar("id", { length: 64 }).primaryKey(),
+    name: varchar("name", { length: 255 }).notNull(),
     description: text("description").notNull().default(""),
-    category: text("category").notNull(),
-    priceCents: integer("price_cents"),
+    category: varchar("category", { length: 32 }).notNull(),
+    priceCents: int("price_cents"),
     priceFrom: boolean("price_from").notNull().default(false),
     isAddon: boolean("is_addon").notNull().default(false),
-    priceNote: text("price_note").notNull().default(""),
-    durationMinutes: integer("duration_minutes").notNull().default(60),
+    priceNote: varchar("price_note", { length: 255 }).notNull().default(""),
+    durationMinutes: int("duration_minutes").notNull().default(60),
     bookable: boolean("bookable").notNull().default(true),
     active: boolean("active").notNull().default(true),
-    sortOrder: integer("sort_order").notNull().default(0),
-    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
-      .notNull()
-      .defaultNow(),
+    sortOrder: int("sort_order").notNull().default(0),
+    createdAt: datetime("created_at", { mode: "date", fsp: 3 }).notNull().defaultNow(),
   },
   (table) => [index("idx_services_category").on(table.category, table.sortOrder)],
 );
 
-export const orders = pgTable(
+export const orders = mysqlTable(
   "orders",
   {
-    id: text("id").primaryKey(),
-    customerName: text("customer_name").notNull(),
-    email: text("email").notNull(),
-    phone: text("phone").notNull().default(""),
-    notes: text("notes").notNull().default(""),
-    status: text("status").notNull().default("new"),
-    totalCents: integer("total_cents").notNull().default(0),
-    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
-      .notNull()
-      .defaultNow(),
+    id: varchar("id", { length: 64 }).primaryKey(),
+    customerName: varchar("customer_name", { length: 255 }).notNull(),
+    email: varchar("email", { length: 255 }).notNull(),
+    phone: varchar("phone", { length: 64 }).notNull().default(""),
+    notes: text("notes").notNull(),
+    status: varchar("status", { length: 32 }).notNull().default("new"),
+    totalCents: int("total_cents").notNull().default(0),
+    createdAt: datetime("created_at", { mode: "date", fsp: 3 }).notNull().defaultNow(),
   },
   (table) => [index("idx_orders_created").on(table.createdAt)],
 );
 
-export const products = pgTable(
+export const products = mysqlTable(
   "products",
   {
-    id: text("id").primaryKey(),
-    name: text("name").notNull(),
-    description: text("description").notNull().default(""),
-    priceCents: integer("price_cents").notNull(),
-    shape: text("shape").notNull().default("almond"),
-    length: text("length").notNull().default("M"),
-    colors: text("colors").notNull().default("[]"),
-    imageUrl: text("image_url").notNull().default(""),
+    id: varchar("id", { length: 64 }).primaryKey(),
+    name: varchar("name", { length: 255 }).notNull(),
+    description: text("description").notNull(),
+    priceCents: int("price_cents").notNull(),
+    shape: varchar("shape", { length: 32 }).notNull().default("almond"),
+    length: varchar("length", { length: 8 }).notNull().default("M"),
+    colors: text("colors").notNull(),
+    imageUrl: varchar("image_url", { length: 512 }).notNull().default(""),
     active: boolean("active").notNull().default(true),
-    sortOrder: integer("sort_order").notNull().default(0),
-    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
-      .notNull()
-      .defaultNow(),
+    sortOrder: int("sort_order").notNull().default(0),
+    createdAt: datetime("created_at", { mode: "date", fsp: 3 }).notNull().defaultNow(),
   },
   (table) => [index("idx_products_sort").on(table.sortOrder)],
 );
 
-export const orderItems = pgTable(
+export const orderItems = mysqlTable(
   "order_items",
   {
-    id: text("id").primaryKey(),
-    orderId: text("order_id")
+    id: varchar("id", { length: 64 }).primaryKey(),
+    orderId: varchar("order_id", { length: 64 })
       .notNull()
       .references(() => orders.id, { onDelete: "cascade" }),
-    serviceId: text("service_id").references(() => services.id, {
+    serviceId: varchar("service_id", { length: 64 }).references(() => services.id, {
       onDelete: "set null",
     }),
-    productId: text("product_id").references(() => products.id, {
+    productId: varchar("product_id", { length: 64 }).references(() => products.id, {
       onDelete: "set null",
     }),
-    serviceName: text("service_name").notNull(),
-    quantity: integer("quantity").notNull().default(1),
-    unitPriceCents: integer("unit_price_cents").notNull().default(0),
-    extraNote: text("extra_note").notNull().default(""),
+    serviceName: varchar("service_name", { length: 255 }).notNull(),
+    quantity: int("quantity").notNull().default(1),
+    unitPriceCents: int("unit_price_cents").notNull().default(0),
+    extraNote: varchar("extra_note", { length: 255 }).notNull().default(""),
   },
   (table) => [index("idx_order_items_order").on(table.orderId)],
 );
 
-export const bookings = pgTable(
+export const bookings = mysqlTable(
   "bookings",
   {
-    id: text("id").primaryKey(),
-    customerName: text("customer_name").notNull(),
-    email: text("email").notNull(),
-    phone: text("phone").notNull().default(""),
-    serviceId: text("service_id").references(() => services.id, {
+    id: varchar("id", { length: 64 }).primaryKey(),
+    customerName: varchar("customer_name", { length: 255 }).notNull(),
+    email: varchar("email", { length: 255 }).notNull(),
+    phone: varchar("phone", { length: 64 }).notNull().default(""),
+    serviceId: varchar("service_id", { length: 64 }).references(() => services.id, {
       onDelete: "set null",
     }),
-    serviceName: text("service_name").notNull(),
-    startAt: timestamp("start_at", { withTimezone: true, mode: "date" }).notNull(),
-    endAt: timestamp("end_at", { withTimezone: true, mode: "date" }).notNull(),
-    notes: text("notes").notNull().default(""),
-    extras: jsonb("extras").$type<BookingExtra[]>().notNull().default([]),
-    status: text("status").notNull().default("pending"),
-    source: text("source").notNull().default("site"),
-    icalUid: text("ical_uid"),
-    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
-      .notNull()
-      .defaultNow(),
+    serviceName: varchar("service_name", { length: 255 }).notNull(),
+    startAt: datetime("start_at", { mode: "date", fsp: 3 }).notNull(),
+    endAt: datetime("end_at", { mode: "date", fsp: 3 }).notNull(),
+    notes: text("notes").notNull(),
+    extras: json("extras").$type<BookingExtra[]>().notNull(),
+    status: varchar("status", { length: 32 }).notNull().default("pending"),
+    source: varchar("source", { length: 32 }).notNull().default("site"),
+    icalUid: varchar("ical_uid", { length: 255 }),
+    createdAt: datetime("created_at", { mode: "date", fsp: 3 }).notNull().defaultNow(),
   },
   (table) => [
     index("idx_bookings_start").on(table.startAt),
@@ -116,24 +109,22 @@ export const bookings = pgTable(
   ],
 );
 
-export const blockedSlots = pgTable(
+export const blockedSlots = mysqlTable(
   "blocked_slots",
   {
-    id: text("id").primaryKey(),
-    title: text("title").notNull().default("Non disponibile"),
-    startAt: timestamp("start_at", { withTimezone: true, mode: "date" }).notNull(),
-    endAt: timestamp("end_at", { withTimezone: true, mode: "date" }).notNull(),
-    source: text("source").notNull().default("admin"),
-    icalUid: text("ical_uid").unique(),
-    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
-      .notNull()
-      .defaultNow(),
+    id: varchar("id", { length: 64 }).primaryKey(),
+    title: varchar("title", { length: 255 }).notNull().default("Non disponibile"),
+    startAt: datetime("start_at", { mode: "date", fsp: 3 }).notNull(),
+    endAt: datetime("end_at", { mode: "date", fsp: 3 }).notNull(),
+    source: varchar("source", { length: 32 }).notNull().default("admin"),
+    icalUid: varchar("ical_uid", { length: 255 }).unique(),
+    createdAt: datetime("created_at", { mode: "date", fsp: 3 }).notNull().defaultNow(),
   },
   (table) => [index("idx_blocked_start").on(table.startAt)],
 );
 
-export const settings = pgTable("settings", {
-  key: text("key").primaryKey(),
+export const settings = mysqlTable("settings", {
+  key: varchar("key", { length: 64 }).primaryKey(),
   value: text("value").notNull(),
 });
 

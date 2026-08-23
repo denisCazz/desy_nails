@@ -1,11 +1,11 @@
-import { drizzle } from "drizzle-orm/postgres-js";
-import postgres from "postgres";
+import { drizzle } from "drizzle-orm/mysql2";
+import mysql from "mysql2/promise";
 import * as schema from "./schema";
 
 type Db = ReturnType<typeof drizzle<typeof schema>>;
 
 const globalForDb = globalThis as unknown as {
-  pg?: ReturnType<typeof postgres>;
+  mysql?: mysql.Pool;
   db?: Db;
 };
 
@@ -15,11 +15,17 @@ export function getDb(): Db {
     throw new Error("DATABASE_URL non configurato");
   }
 
-  if (!globalForDb.pg) {
-    globalForDb.pg = postgres(url, { max: 4, idle_timeout: 20 });
+  if (!globalForDb.mysql) {
+    globalForDb.mysql = mysql.createPool({
+      uri: url,
+      waitForConnections: true,
+      connectionLimit: 4,
+      timezone: "Z",
+      dateStrings: false,
+    });
   }
   if (!globalForDb.db) {
-    globalForDb.db = drizzle(globalForDb.pg, { schema });
+    globalForDb.db = drizzle(globalForDb.mysql, { schema, mode: "default" });
   }
   return globalForDb.db;
 }

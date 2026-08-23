@@ -11,7 +11,7 @@ export function Hero() {
         preload
         quality={100}
         sizes="100vw"
-        className="object-cover object-[68%_18%] md:object-[78%_center]"
+        className="object-cover object-[0%_42%] md:object-[78%_center]"
       />
       <div className="absolute inset-0 bg-linear-to-r from-black/75 via-black/30 to-transparent" />
       <div className="relative mx-auto flex min-h-[88vh] max-w-6xl items-center px-4 py-16">

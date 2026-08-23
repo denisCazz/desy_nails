@@ -1,14 +1,14 @@
 services:
-  postgres:
-    image: postgres:16-alpine
+  mysql:
+    image: mysql:8.4
     environment:
-      POSTGRES_DB: desy_nails
-      POSTGRES_USER: desy
-      POSTGRES_PASSWORD: desy_dev
+      MYSQL_DATABASE: desy_nails
+      MYSQL_ROOT_PASSWORD: desy_dev
     ports:
-      - "5432:5432"
+      - "3306:3306"
     volumes:
-      - desy_pg:/var/lib/postgresql/data
+      - desy_mysql:/var/lib/mysql
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
 
 volumes:
-  desy_pg:
+  desy_mysql:
