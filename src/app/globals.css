@@ -125,8 +125,20 @@ body {
   animation: cart-bounce 0.65s cubic-bezier(0.22, 1, 0.36, 1) infinite;
 }
 
-.cart-panel-pulse {
-  animation: cart-panel-pulse 0.8s ease-out;
+.cart-drawer-overlay {
+  animation: cart-overlay-in 0.2s ease-out;
+}
+
+.cart-drawer-panel {
+  animation: cart-drawer-in 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.menu-overlay {
+  animation: menu-overlay-in 0.28s ease-out;
+}
+
+.menu-link {
+  animation: menu-link-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 @keyframes cart-fly {
@@ -174,12 +186,41 @@ body {
   }
 }
 
-@keyframes cart-panel-pulse {
-  0% {
-    box-shadow: 0 0 0 0 color-mix(in oklab, var(--gold) 55%, transparent);
+@keyframes cart-overlay-in {
+  from {
+    opacity: 0;
   }
-  100% {
-    box-shadow: 0 0 0 14px transparent;
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes cart-drawer-in {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes menu-overlay-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes menu-link-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
@@ -188,7 +229,10 @@ body {
   .cart-bounce,
   .cart-bounce-loop,
   .cart-badge,
-  .cart-panel-pulse {
+  .cart-drawer-overlay,
+  .cart-drawer-panel,
+  .menu-overlay,
+  .menu-link {
     animation: none;
   }
 }

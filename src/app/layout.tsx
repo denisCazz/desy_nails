@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Great_Vibes, Outfit, Playfair_Display } from "next/font/google";
+import { CartDrawer } from "@/components/cart-drawer";
 import { CartProvider } from "@/components/cart-provider";
 import { Footer } from "@/components/footer";
 import { Header } from "@/components/header";
@@ -107,6 +108,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
               Salta al contenuto
             </a>
             <Header />
+            <CartDrawer />
             <main id="contenuto" className="flex-1">
               {children}
             </main>

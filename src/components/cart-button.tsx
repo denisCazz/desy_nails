@@ -1,12 +1,11 @@
 "use client";
 
-import Link from "next/link";
 import { ShoppingBag } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useCart } from "./cart-provider";
 
 export function CartButton() {
-  const { itemCount, pulseId } = useCart();
+  const { itemCount, pulseId, isOpen, toggleCart } = useCart();
   const [mounted, setMounted] = useState(false);
   const [bouncing, setBouncing] = useState(false);
 
@@ -28,18 +27,21 @@ export function CartButton() {
   const count = mounted ? itemCount : 0;
   const label =
     count === 0
-      ? "Carrello, vai allo shop"
+      ? "Apri il carrello"
       : count === 1
-        ? "Carrello, 1 articolo"
-        : `Carrello, ${count} articoli`;
+        ? "Apri il carrello, 1 articolo"
+        : `Apri il carrello, ${count} articoli`;
 
   return (
-    <Link
-      href="/shop#carrello"
+    <button
+      type="button"
       data-cart-target
       aria-label={label}
+      aria-expanded={isOpen}
+      aria-controls="cart-drawer"
+      onClick={toggleCart}
       className={`relative inline-flex size-9 items-center justify-center rounded-full border text-mauve transition hover:border-gold hover:text-gold ${
-        count > 0 ? "border-gold bg-gold/15 text-gold" : "border-line"
+        count > 0 || isOpen ? "border-gold bg-gold/15 text-gold" : "border-line"
       } ${bouncing ? "cart-bounce" : ""}`}
     >
       <ShoppingBag className="size-4" />
@@ -48,6 +50,6 @@ export function CartButton() {
           {count > 99 ? "99+" : count}
         </span>
       ) : null}
-    </Link>
+    </button>
   );
 }

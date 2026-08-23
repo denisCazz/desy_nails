@@ -2,6 +2,7 @@
 
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -29,6 +30,10 @@ type CartContextValue = {
   totalCents: number;
   itemCount: number;
   pulseId: number;
+  isOpen: boolean;
+  openCart: () => void;
+  closeCart: () => void;
+  toggleCart: () => void;
 };
 
 type FlyParticle = {
@@ -80,6 +85,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false);
   const [pulseId, setPulseId] = useState(0);
   const [flies, setFlies] = useState<FlyParticle[]>([]);
+  const [isOpen, setIsOpen] = useState(false);
+
+  const openCart = useCallback(() => setIsOpen(true), []);
+  const closeCart = useCallback(() => setIsOpen(false), []);
+  const toggleCart = useCallback(() => setIsOpen((open) => !open), []);
 
   useEffect(() => {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -128,8 +138,21 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       0,
     );
     const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
-    return { items, add, remove, setQuantity, clear, totalCents, itemCount, pulseId };
-  }, [items, pulseId]);
+    return {
+      items,
+      add,
+      remove,
+      setQuantity,
+      clear,
+      totalCents,
+      itemCount,
+      pulseId,
+      isOpen,
+      openCart,
+      closeCart,
+      toggleCart,
+    };
+  }, [items, pulseId, isOpen, openCart, closeCart, toggleCart]);
 
   return (
     <CartContext.Provider value={value}>
