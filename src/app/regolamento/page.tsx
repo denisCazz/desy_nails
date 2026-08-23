@@ -1,9 +1,21 @@
 import type { Metadata } from "next";
 import { CalendarHeart } from "lucide-react";
 import { GoldDivider } from "@/components/gold-divider";
+import { JsonLd } from "@/components/json-ld";
 import { SectionHeading } from "@/components/section-heading";
+import {
+  PAGE_SEO,
+  breadcrumbJsonLd,
+  jsonLdGraph,
+  pageMetadata,
+  webPageJsonLd,
+} from "@/lib/seo";
 
-export const metadata: Metadata = { title: "Regolamento" };
+export const metadata: Metadata = pageMetadata(
+  PAGE_SEO.regolamento.path,
+  PAGE_SEO.regolamento.title,
+  PAGE_SEO.regolamento.description,
+);
 
 const rules = [
   "I prezzi del refill sono validi entro 4 settimane dall’ultimo appuntamento.",
@@ -15,8 +27,21 @@ const rules = [
 ];
 
 export default function RegolamentoPage() {
+  const jsonLd = jsonLdGraph([
+    webPageJsonLd(
+      PAGE_SEO.regolamento.path,
+      PAGE_SEO.regolamento.title,
+      PAGE_SEO.regolamento.description,
+    ),
+    breadcrumbJsonLd([
+      { name: "Home", path: "/" },
+      { name: "Regolamento", path: "/regolamento" },
+    ]),
+  ]);
+
   return (
     <div className="mx-auto max-w-3xl px-4 py-16">
+      <JsonLd data={jsonLd} />
       <SectionHeading script="Studio" title="Regolamento" />
       <GoldDivider className="mx-auto my-8 w-40" />
       <ol className="space-y-5">

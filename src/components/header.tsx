@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, ShoppingBag, X } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { INSTAGRAM_URL } from "@/lib/brand";
 import { useState } from "react";
+import { CartButton } from "./cart-button";
 import { Logo } from "./logo";
 import { ThemeToggle } from "./theme-toggle";
 
@@ -56,13 +57,7 @@ export function Header() {
               <circle cx="17.5" cy="6.5" r="1" fill="currentColor" />
             </svg>
           </a>
-          <Link
-            href="/shop"
-            className="inline-flex size-9 items-center justify-center rounded-full border border-line text-mauve hover:border-gold hover:text-gold"
-            aria-label="Shop"
-          >
-            <ShoppingBag className="size-4" />
-          </Link>
+          <CartButton />
           <ThemeToggle />
           <button
             type="button"

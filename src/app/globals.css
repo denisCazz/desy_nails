@@ -83,3 +83,112 @@ body {
   pointer-events: none;
   user-select: none;
 }
+
+.cart-fly {
+  position: fixed;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  margin: -1.125rem 0 0 -1.125rem;
+  border-radius: 999px;
+  pointer-events: none;
+  color: #3a2c2e;
+  background: var(--gold);
+  box-shadow: 0 8px 20px color-mix(in oklab, var(--gold) 45%, transparent);
+  animation: cart-fly 0.65s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.cart-badge {
+  position: absolute;
+  top: -0.35rem;
+  right: -0.35rem;
+  min-width: 1.1rem;
+  height: 1.1rem;
+  padding: 0 0.28rem;
+  border-radius: 999px;
+  background: var(--gold);
+  color: #3a2c2e;
+  font-size: 0.65rem;
+  font-weight: 700;
+  line-height: 1.1rem;
+  text-align: center;
+  animation: cart-badge-pop 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.cart-bounce {
+  animation: cart-bounce 0.65s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.cart-bounce-loop {
+  animation: cart-bounce 0.65s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+
+.cart-panel-pulse {
+  animation: cart-panel-pulse 0.8s ease-out;
+}
+
+@keyframes cart-fly {
+  0% {
+    transform: translate(0, 0) scale(1);
+    opacity: 1;
+  }
+  45% {
+    transform: translate(calc(var(--dx) * 0.45), calc(var(--dy) * 0.28 - 48px)) scale(0.95);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(var(--dx), var(--dy)) scale(0.2);
+    opacity: 0.15;
+  }
+}
+
+@keyframes cart-bounce {
+  0% {
+    transform: scale(1) rotate(0deg);
+  }
+  28% {
+    transform: scale(1.22) rotate(-14deg);
+  }
+  52% {
+    transform: scale(1.08) rotate(10deg);
+  }
+  76% {
+    transform: scale(1.16) rotate(-6deg);
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+@keyframes cart-badge-pop {
+  0% {
+    transform: scale(0.4);
+  }
+  65% {
+    transform: scale(1.28);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes cart-panel-pulse {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in oklab, var(--gold) 55%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 14px transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cart-fly,
+  .cart-bounce,
+  .cart-bounce-loop,
+  .cart-badge,
+  .cart-panel-pulse {
+    animation: none;
+  }
+}

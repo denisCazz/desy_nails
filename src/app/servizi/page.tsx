@@ -1,12 +1,25 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { asc, eq } from "drizzle-orm";
-import { ServiceList } from "@/components/service-list";
+import { JsonLd } from "@/components/json-ld";
 import { SectionHeading } from "@/components/section-heading";
+import { ServiceList } from "@/components/service-list";
 import { getDb } from "@/lib/db";
 import { services } from "@/lib/db/schema";
+import {
+  PAGE_SEO,
+  breadcrumbJsonLd,
+  jsonLdGraph,
+  pageMetadata,
+  servicesCatalogJsonLd,
+  webPageJsonLd,
+} from "@/lib/seo";
 
-export const metadata: Metadata = { title: "Servizi" };
+export const metadata: Metadata = pageMetadata(
+  PAGE_SEO.servizi.path,
+  PAGE_SEO.servizi.title,
+  PAGE_SEO.servizi.description,
+);
 export const dynamic = "force-dynamic";
 
 export default async function ServiziPage() {
@@ -17,8 +30,18 @@ export default async function ServiziPage() {
     .where(eq(services.active, true))
     .orderBy(asc(services.sortOrder));
 
+  const jsonLd = jsonLdGraph([
+    webPageJsonLd(PAGE_SEO.servizi.path, PAGE_SEO.servizi.title, PAGE_SEO.servizi.description),
+    servicesCatalogJsonLd(rows),
+    breadcrumbJsonLd([
+      { name: "Home", path: "/" },
+      { name: "Servizi", path: "/servizi" },
+    ]),
+  ]);
+
   return (
     <div className="mx-auto max-w-3xl px-4 py-16">
+      <JsonLd data={jsonLd} />
       <SectionHeading
         script="Listino"
         title="Prezzi"

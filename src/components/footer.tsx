@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { GoldDivider } from "./gold-divider";
 import { Logo } from "./logo";
-import { INSTAGRAM_HANDLE, INSTAGRAM_URL } from "@/lib/brand";
+import { CREATOR_NAME, CREATOR_URL, INSTAGRAM_HANDLE, INSTAGRAM_URL } from "@/lib/brand";
 import { getSetting } from "@/lib/settings";
 
 export async function Footer() {
@@ -35,6 +35,22 @@ export async function Footer() {
             <Link href="/regolamento">Regolamento</Link>
             <Link href="/admin">Admin</Link>
           </div>
+          <p className="mt-8 inline-flex items-center gap-1 text-xs text-muted/80">
+            sito creato con
+            <svg viewBox="0 0 12 12" className="size-3.5 fill-[#e11d48]" aria-hidden>
+              <path d="M6 10.8C2.4 8.4 0.6 6.2 0.6 4.1 0.6 2.5 1.8 1.3 3.4 1.3c.9 0 1.8.5 2.6 1.4.8-.9 1.7-1.4 2.6-1.4 1.6 0 2.8 1.2 2.8 2.8 0 2.1-1.8 4.3-5.4 6.7Z" />
+            </svg>
+            <span className="sr-only">amore</span>
+            da{" "}
+            <a
+              href={CREATOR_URL}
+              className="text-muted hover:text-gold"
+              target="_blank"
+              rel="noreferrer"
+            >
+              {CREATOR_NAME}
+            </a>
+          </p>
         </div>
       </div>
     </footer>

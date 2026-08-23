@@ -1,14 +1,42 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { ExpectSection } from "@/components/expect-section";
 import { GoldDivider } from "@/components/gold-divider";
 import { Hero } from "@/components/hero";
+import { JsonLd } from "@/components/json-ld";
 import { UniqueSection } from "@/components/unique-section";
+import {
+  PAGE_SEO,
+  jsonLdGraph,
+  nailSalonJsonLd,
+  pageMetadata,
+  personJsonLd,
+  webPageJsonLd,
+  webSiteJsonLd,
+} from "@/lib/seo";
+import { getStudioConfig } from "@/lib/settings";
 
 export const dynamic = "force-dynamic";
 
-export default function HomePage() {
+export const metadata: Metadata = pageMetadata(
+  PAGE_SEO.home.path,
+  PAGE_SEO.home.title,
+  PAGE_SEO.home.description,
+  { absoluteTitle: PAGE_SEO.home.title },
+);
+
+export default async function HomePage() {
+  const studio = await getStudioConfig();
+  const jsonLd = jsonLdGraph([
+    webSiteJsonLd(),
+    nailSalonJsonLd(studio),
+    personJsonLd(studio.instagram),
+    webPageJsonLd(PAGE_SEO.home.path, PAGE_SEO.home.title, PAGE_SEO.home.description),
+  ]);
+
   return (
     <>
+      <JsonLd data={jsonLd} />
       <Hero />
       <section className="px-4 py-16 text-center">
         <p className="text-xs tracking-[0.42em] uppercase text-gold">Desiree Tropini Studio</p>

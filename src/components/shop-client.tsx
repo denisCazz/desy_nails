@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { Check, ShoppingBag } from "lucide-react";
+import { useEffect, useState } from "react";
 import { formatPrice } from "@/lib/format";
 import type { Product } from "@/lib/db/schema";
 import { useCart } from "./cart-provider";
@@ -17,31 +18,55 @@ export function ShopClient({ products }: { products: Product[] }) {
   const cart = useCart();
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [justAddedId, setJustAddedId] = useState<string | null>(null);
+  const [panelPulse, setPanelPulse] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!justAddedId) return;
+    const timer = window.setTimeout(() => setJustAddedId(null), 1400);
+    return () => window.clearTimeout(timer);
+  }, [justAddedId, cart.pulseId]);
+
+  useEffect(() => {
+    if (!cart.pulseId) return;
+    setPanelPulse(true);
+    const timer = window.setTimeout(() => setPanelPulse(false), 800);
+    return () => window.clearTimeout(timer);
+  }, [cart.pulseId]);
 
   async function checkout(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
     setMessage("");
-    const form = new FormData(event.currentTarget);
-    const res = await fetch("/api/orders", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        customerName: String(form.get("customerName") ?? ""),
-        email: String(form.get("email") ?? ""),
-        phone: String(form.get("phone") ?? ""),
-        notes: String(form.get("notes") ?? ""),
-        items: cart.items,
-      }),
-    });
-    const data = (await res.json()) as { error?: string };
-    if (!res.ok) {
-      setError(data.error ?? "Ordine non inviato.");
-      return;
+    setSubmitting(true);
+    const formEl = event.currentTarget;
+    const form = new FormData(formEl);
+    try {
+      const res = await fetch("/api/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customerName: String(form.get("customerName") ?? ""),
+          email: String(form.get("email") ?? ""),
+          phone: String(form.get("phone") ?? ""),
+          notes: String(form.get("notes") ?? ""),
+          items: cart.items,
+        }),
+      });
+      const data = (await res.json()) as { error?: string };
+      if (!res.ok) {
+        setError(data.error ?? "Ordine non inviato.");
+        return;
+      }
+      cart.clear();
+      setMessage("Ordine inviato. Ti risponderò via email per confermare disponibilità e misura.");
+      formEl.reset();
+    } catch {
+      setError("Ordine non inviato.");
+    } finally {
+      setSubmitting(false);
     }
-    cart.clear();
-    setMessage("Ordine inviato. Ti risponderò via email per confermare disponibilità e misura.");
-    event.currentTarget.reset();
   }
 
   return (
@@ -63,26 +88,49 @@ export function ShopClient({ products }: { products: Product[] }) {
               </p>
               <button
                 type="button"
-                onClick={() =>
-                  cart.add({
-                    productId: product.id,
-                    name: product.name,
-                    unitPriceCents: product.priceCents,
-                    quantity: 1,
-                    extraNote: `${shapeLabel[product.shape] ?? product.shape} ${product.length}`,
-                  })
-                }
-                className="w-full rounded-full border border-gold px-4 py-2 text-sm text-mauve hover:bg-gold hover:text-[#3a2c2e]"
+                onClick={(event) => {
+                  cart.add(
+                    {
+                      productId: product.id,
+                      name: product.name,
+                      unitPriceCents: product.priceCents,
+                      quantity: 1,
+                      extraNote: `${shapeLabel[product.shape] ?? product.shape} ${product.length}`,
+                    },
+                    event.currentTarget,
+                  );
+                  setJustAddedId(product.id);
+                }}
+                className={`w-full rounded-full border px-4 py-2 text-sm transition ${
+                  justAddedId === product.id
+                    ? "border-gold bg-gold text-[#3a2c2e]"
+                    : "border-gold text-mauve hover:bg-gold hover:text-[#3a2c2e]"
+                }`}
               >
-                Aggiungi al carrello
+                {justAddedId === product.id ? (
+                  <span className="inline-flex items-center justify-center gap-1.5">
+                    <Check className="size-4" />
+                    Aggiunto al carrello
+                  </span>
+                ) : (
+                  "Aggiungi al carrello"
+                )}
               </button>
             </div>
           </article>
         ))}
       </div>
 
-      <aside className="gold-border h-fit rounded-3xl bg-surface p-6 lg:sticky lg:top-24">
-        <h2 className="font-serif text-2xl text-mauve">Il tuo ordine</h2>
+      <aside
+        id="carrello"
+        className={`gold-border h-fit scroll-mt-24 rounded-3xl bg-surface p-6 lg:sticky lg:top-24 ${
+          panelPulse ? "cart-panel-pulse" : ""
+        }`}
+      >
+        <h2 className="flex items-center gap-2 font-serif text-2xl text-mauve">
+          <ShoppingBag className={`size-5 ${panelPulse ? "cart-bounce" : ""}`} />
+          Il tuo ordine
+        </h2>
         {cart.items.length === 0 ? (
           <p className="mt-3 text-sm text-muted">Nessun set nel carrello.</p>
         ) : (
@@ -144,10 +192,17 @@ export function ShopClient({ products }: { products: Product[] }) {
           />
           <button
             type="submit"
-            disabled={cart.items.length === 0}
+            disabled={cart.items.length === 0 || submitting}
             className="rounded-full bg-gold py-3 font-medium text-[#3a2c2e] disabled:opacity-50"
           >
-            Invia ordine via email
+            {submitting ? (
+              <span className="inline-flex items-center justify-center gap-2">
+                <ShoppingBag className="size-4 cart-bounce-loop" />
+                Invio ordine…
+              </span>
+            ) : (
+              "Invia ordine via email"
+            )}
           </button>
         </form>
         {error ? <p className="mt-3 text-sm text-rose-700 dark:text-rose">{error}</p> : null}

@@ -1,14 +1,40 @@
 import type { Metadata } from "next";
-import { GoldDivider } from "@/components/gold-divider";
-import { UniqueSection } from "@/components/unique-section";
 import { ExpectSection } from "@/components/expect-section";
+import { GoldDivider } from "@/components/gold-divider";
+import { JsonLd } from "@/components/json-ld";
 import { SectionHeading } from "@/components/section-heading";
+import { UniqueSection } from "@/components/unique-section";
+import { INSTAGRAM_HANDLE } from "@/lib/brand";
+import {
+  PAGE_SEO,
+  breadcrumbJsonLd,
+  jsonLdGraph,
+  pageMetadata,
+  personJsonLd,
+  webPageJsonLd,
+} from "@/lib/seo";
+import { getSetting } from "@/lib/settings";
 
-export const metadata: Metadata = { title: "Chi sono" };
+export const metadata: Metadata = pageMetadata(
+  PAGE_SEO.chiSono.path,
+  PAGE_SEO.chiSono.title,
+  PAGE_SEO.chiSono.description,
+);
 
-export default function ChiSonoPage() {
+export default async function ChiSonoPage() {
+  const instagram = (await getSetting("instagram", INSTAGRAM_HANDLE)) || INSTAGRAM_HANDLE;
+  const jsonLd = jsonLdGraph([
+    webPageJsonLd(PAGE_SEO.chiSono.path, PAGE_SEO.chiSono.title, PAGE_SEO.chiSono.description),
+    personJsonLd(instagram),
+    breadcrumbJsonLd([
+      { name: "Home", path: "/" },
+      { name: "Chi sono", path: "/chi-sono" },
+    ]),
+  ]);
+
   return (
     <div className="relative overflow-hidden">
+      <JsonLd data={jsonLd} />
       <span className="watermark absolute -right-8 top-24 text-[12rem] text-blush/70 dark:text-blush/30">
         DT
       </span>
