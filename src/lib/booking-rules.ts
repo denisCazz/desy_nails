@@ -1,1 +1,2 @@
 export const DEFAULT_MIN_NOTICE_HOURS = 24;
+export const BOOKING_WINDOW_DAYS = 60;

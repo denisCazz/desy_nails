@@ -84,7 +84,7 @@ export function slotsForDay(options: {
   return slots;
 }
 
-export async function getAvailability(service: Service, days = 28) {
+export async function getAvailability(service: Service, days: number, extraMinutes = 0) {
   const config = await getStudioConfig();
   const todayParts = toRomeParts(new Date());
   const start = fromRomeLocal(todayParts.date, "00:00");
@@ -97,7 +97,7 @@ export async function getAvailability(service: Service, days = 28) {
     const dateStr = toRomeParts(day).date;
     const slots = slotsForDay({
       dateStr,
-      durationMinutes: service.durationMinutes,
+      durationMinutes: service.durationMinutes + extraMinutes,
       interval: config.slotInterval,
       bufferMinutes: config.bufferMinutes,
       minNoticeMinutes: config.minNoticeHours * 60,

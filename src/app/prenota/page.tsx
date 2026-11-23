@@ -6,6 +6,7 @@ import { JsonLd } from "@/components/json-ld";
 import { SectionHeading } from "@/components/section-heading";
 import { getDb } from "@/lib/db";
 import { services } from "@/lib/db/schema";
+import { toRomeParts } from "@/lib/time";
 import {
   PAGE_SEO,
   absoluteUrl,
@@ -22,7 +23,8 @@ export const metadata: Metadata = pageMetadata(
 );
 export const dynamic = "force-dynamic";
 
-export default async function PrenotaPage() {
+export default async function PrenotaPage({ searchParams }: PageProps<"/prenota">) {
+  const { servizio } = await searchParams;
   const db = getDb();
   const rows = await db
     .select()
@@ -44,19 +46,21 @@ export default async function PrenotaPage() {
   ]);
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-16">
+    <div className="mx-auto max-w-6xl px-4 py-10 sm:py-16">
       <JsonLd data={jsonLd} />
       <SectionHeading
         script="Il tuo momento"
         title="Prenota"
         subtitle="Che sia per una manicure, una ricostruzione o un refill, sono qui per prendermi cura di te e valorizzare la tua bellezza."
       />
-      <div className="mt-12">
+      <div className="mt-8 sm:mt-12">
         <BookingForm
           services={rows.filter((row) => !row.isAddon)}
           extras={rows.filter((row) => row.isAddon)}
           formToken={issueFormToken()}
           captchaSiteKey={turnstileSiteKey()}
+          today={toRomeParts(new Date()).date}
+          initialServiceId={typeof servizio === "string" ? servizio : ""}
         />
       </div>
     </div>

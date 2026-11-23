@@ -11,6 +11,7 @@ import {
   verifyTurnstile,
 } from "@/lib/anti-spam";
 import { getBusyRanges, isSlotFree, slotsForDay } from "@/lib/availability";
+import { BOOKING_WINDOW_DAYS } from "@/lib/booking-rules";
 import { pushBookingToCalDav } from "@/lib/caldav";
 import { getDb } from "@/lib/db";
 import { bookings, services, type BookingExtra } from "@/lib/db/schema";
@@ -22,7 +23,6 @@ import { normalizePhone, personNameSchema, phoneSchema } from "@/lib/validation"
 
 const MAX_BOOKINGS_PER_IP_PER_DAY = 4;
 const MAX_ACTIVE_BOOKINGS_PER_CUSTOMER = 3;
-const BOOKING_WINDOW_DAYS = 60;
 
 const schema = z.object({
   serviceId: z.string().max(64),
@@ -150,7 +150,7 @@ export async function POST(request: Request) {
   const dayStart = fromRomeLocal(data.date, "00:00");
   const daySlots = slotsForDay({
     dateStr: data.date,
-    durationMinutes: service.durationMinutes,
+    durationMinutes: service.durationMinutes + extraMinutes,
     interval: config.slotInterval,
     bufferMinutes: config.bufferMinutes,
     minNoticeMinutes: config.minNoticeHours * 60,
