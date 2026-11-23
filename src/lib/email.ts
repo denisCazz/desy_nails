@@ -8,8 +8,18 @@ function getResend() {
   return new Resend(key);
 }
 
-const from =
-  process.env.EMAIL_FROM ?? "Desy Nails <onboarding@resend.dev>";
+const from = process.env.EMAIL_FROM || "Desy Nails <prenotazioni@bitora.it>";
+
+const studioEmail = () => process.env.STUDIO_EMAIL || "tropini.desi06@gmail.com";
+
+function esc(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
 
 function wrap(title: string, body: string) {
   return `<!DOCTYPE html>
@@ -51,29 +61,29 @@ type OrderEmail = {
 
 export async function sendOrderEmails(order: OrderEmail) {
   const resend = getResend();
-  const studio = process.env.STUDIO_EMAIL;
+  const studio = studioEmail();
   const itemsHtml = order.items
     .map(
       (item) =>
-        `<li>${item.quantity}× ${item.name} — ${formatPrice(item.unitPriceCents * item.quantity)}${item.extraNote ? ` (${item.extraNote})` : ""}</li>`,
+        `<li>${item.quantity}× ${esc(item.name)} — ${formatPrice(item.unitPriceCents * item.quantity)}${item.extraNote ? ` (${esc(item.extraNote)})` : ""}</li>`,
     )
     .join("");
 
   const customerBody = wrap(
     "Ordine ricevuto",
-    `<p>Ciao ${order.customerName}, grazie per il tuo ordine. Ti ricontatterò al più presto per confermare i dettagli.</p>
+    `<p>Ciao ${esc(order.customerName)}, grazie per il tuo ordine. Ti ricontatterò al più presto per confermare i dettagli.</p>
      <ul>${itemsHtml}</ul>
      <p><strong>Totale: ${formatPrice(order.totalCents)}</strong></p>
-     ${order.notes ? `<p>Note: ${order.notes}</p>` : ""}`,
+     ${order.notes ? `<p>Note: ${esc(order.notes)}</p>` : ""}`,
   );
 
   const studioBody = wrap(
     "Nuovo ordine shop",
-    `<p><strong>${order.customerName}</strong> — ${order.email}${order.phone ? ` — ${order.phone}` : ""}</p>
+    `<p><strong>${esc(order.customerName)}</strong> — ${esc(order.email)}${order.phone ? ` — ${esc(order.phone)}` : ""}</p>
      <p>ID ordine: ${order.id}</p>
      <ul>${itemsHtml}</ul>
      <p><strong>Totale: ${formatPrice(order.totalCents)}</strong></p>
-     ${order.notes ? `<p>Note: ${order.notes}</p>` : ""}`,
+     ${order.notes ? `<p>Note: ${esc(order.notes)}</p>` : ""}`,
   );
 
   if (!resend) {
@@ -120,35 +130,38 @@ type BookingEmail = {
   extras: { name: string; quantity: number }[];
 };
 
+function bookingWhen(startAt: Date, endAt: Date) {
+  const day = formatRomeDate(startAt, { weekday: "long", day: "numeric", month: "long" });
+  const time = (date: Date) => formatRomeDate(date, { hour: "2-digit", minute: "2-digit" });
+  return `${day}, ${time(startAt)}–${time(endAt)}`;
+}
+
 export async function sendBookingEmails(booking: BookingEmail) {
   const resend = getResend();
-  const studio = process.env.STUDIO_EMAIL;
-  const when = `${formatRomeDate(booking.startAt, {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    hour: "2-digit",
-    minute: "2-digit",
-  })}`;
+  const when = bookingWhen(booking.startAt, booking.endAt);
   const extras =
     booking.extras.length > 0
-      ? `<p>Extra: ${booking.extras.map((extra) => extra.name).join(", ")}</p>`
+      ? `<p>Extra: ${esc(booking.extras.map((extra) => extra.name).join(", "))}</p>`
       : "";
+  const appUrl = process.env.APP_URL ?? "";
 
   const customerBody = wrap(
     "Prenotazione ricevuta",
-    `<p>Ciao ${booking.customerName}, la tua richiesta è arrivata.</p>
-     <p><strong>${booking.serviceName}</strong><br/>${when}</p>
+    `<p>Ciao ${esc(booking.customerName)}, la tua richiesta è arrivata.</p>
+     <p><strong>${esc(booking.serviceName)}</strong><br/>${when}</p>
      ${extras}
      <p>Ti confermerò l'appuntamento il prima possibile.</p>`,
   );
 
   const studioBody = wrap(
     "Nuova prenotazione",
-    `<p><strong>${booking.customerName}</strong> — ${booking.email}${booking.phone ? ` — ${booking.phone}` : ""}</p>
-     <p>${booking.serviceName}<br/>${when}</p>
+    `<p><strong>${esc(booking.customerName)}</strong></p>
+     <p>Email: <a href="mailto:${esc(booking.email)}">${esc(booking.email)}</a><br/>
+        Telefono: <a href="tel:${esc(booking.phone)}">${esc(booking.phone)}</a></p>
+     <p><strong>${esc(booking.serviceName)}</strong><br/>${when}</p>
      ${extras}
-     ${booking.notes ? `<p>Note: ${booking.notes}</p>` : ""}`,
+     ${booking.notes ? `<p>Note: ${esc(booking.notes)}</p>` : ""}
+     ${appUrl ? `<p><a href="${esc(appUrl)}/admin/prenotazioni" style="color:#8f4e56;">Apri nel pannello admin</a></p>` : ""}`,
   );
 
   if (!resend) {
@@ -156,10 +169,23 @@ export async function sendBookingEmails(booking: BookingEmail) {
     return { sent: false };
   }
 
+  const { error: studioError } = await resend.emails.send(
+    {
+      from,
+      to: [studioEmail()],
+      replyTo: booking.email,
+      subject: `Nuova prenotazione — ${booking.customerName}`,
+      html: studioBody,
+    },
+    { idempotencyKey: `booking-studio/${booking.id}` },
+  );
+  if (studioError) console.error(studioError.message);
+
   const { error: customerError } = await resend.emails.send(
     {
       from,
       to: [booking.email],
+      replyTo: studioEmail(),
       subject: `Desy Nails — prenotazione ${booking.serviceName}`,
       html: customerBody,
     },
@@ -167,18 +193,50 @@ export async function sendBookingEmails(booking: BookingEmail) {
   );
   if (customerError) console.error(customerError.message);
 
-  if (studio) {
-    const { error: studioError } = await resend.emails.send(
-      {
-        from,
-        to: [studio],
-        subject: `Nuova prenotazione — ${booking.customerName}`,
-        html: studioBody,
-      },
-      { idempotencyKey: `booking-studio/${booking.id}` },
-    );
-    if (studioError) console.error(studioError.message);
-  }
-
   return { sent: true };
+}
+
+export async function sendBookingUpdateEmail(booking: {
+  id: string;
+  customerName: string;
+  email: string;
+  serviceName: string;
+  startAt: Date;
+  endAt: Date;
+  status: string;
+}) {
+  const resend = getResend();
+  if (!resend) return { sent: false };
+
+  const when = bookingWhen(booking.startAt, booking.endAt);
+  const cancelled = booking.status === "cancelled";
+  const title = cancelled
+    ? "Appuntamento annullato"
+    : booking.status === "confirmed"
+      ? "Appuntamento confermato"
+      : "Appuntamento aggiornato";
+  const body = wrap(
+    title,
+    cancelled
+      ? `<p>Ciao ${esc(booking.customerName)}, il tuo appuntamento per <strong>${esc(booking.serviceName)}</strong> di ${when} è stato annullato.</p>
+         <p>Per fissare una nuova data rispondi a questa email.</p>`
+      : `<p>Ciao ${esc(booking.customerName)}, ecco i dettagli del tuo appuntamento:</p>
+         <p><strong>${esc(booking.serviceName)}</strong><br/>${when}</p>
+         <p>Se l'orario non ti va bene rispondi a questa email.</p>`,
+  );
+
+  const { error } = await resend.emails.send(
+    {
+      from,
+      to: [booking.email],
+      replyTo: studioEmail(),
+      subject: `Desy Nails — ${title.toLowerCase()}`,
+      html: body,
+    },
+    {
+      idempotencyKey: `booking-update/${booking.id}/${booking.status}/${booking.startAt.getTime()}-${booking.endAt.getTime()}`,
+    },
+  );
+  if (error) console.error(error.message);
+  return { sent: !error };
 }

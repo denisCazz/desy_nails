@@ -3,6 +3,7 @@
 import { addDays, format, startOfWeek } from "date-fns";
 import { it } from "date-fns/locale";
 import { useMemo, useState } from "react";
+import { BookingEditor } from "@/components/admin/booking-editor";
 import type { BlockedSlot, Booking } from "@/lib/db/schema";
 import { formatRomeDate } from "@/lib/time";
 
@@ -17,6 +18,7 @@ export function AgendaBoard({ bookings, blocks, calendarUrl }: Props) {
   const [rows, setRows] = useState(bookings);
   const [blocked, setBlocked] = useState(blocks);
   const [message, setMessage] = useState("");
+  const [editing, setEditing] = useState<Booking | null>(null);
 
   const days = useMemo(
     () => Array.from({ length: 7 }, (_, index) => addDays(weekStart, index)),
@@ -83,6 +85,20 @@ export function AgendaBoard({ bookings, blocks, calendarUrl }: Props) {
 
   return (
     <div className="space-y-6">
+      {editing ? (
+        <BookingEditor
+          booking={editing}
+          onClose={() => setEditing(null)}
+          onSaved={(saved) => {
+            setRows((current) => current.map((row) => (row.id === saved.id ? saved : row)));
+            setEditing(null);
+          }}
+          onDeleted={(id) => {
+            setRows((current) => current.filter((row) => row.id !== id));
+            setEditing(null);
+          }}
+        />
+      ) : null}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex gap-2">
           <button
@@ -124,14 +140,26 @@ export function AgendaBoard({ bookings, blocks, calendarUrl }: Props) {
               <div className="mt-2 space-y-2">
                 {events.bookings.map((booking) => (
                   <article key={booking.id} className="rounded-xl bg-blush/40 p-2 text-xs">
-                    <p className="font-medium">
-                      {formatRomeDate(new Date(booking.startAt), {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}{" "}
-                      {booking.serviceName}
-                    </p>
-                    <p>{booking.customerName}</p>
+                    <button
+                      type="button"
+                      onClick={() => setEditing(booking)}
+                      className="block w-full text-left hover:underline"
+                      title="Modifica appuntamento"
+                    >
+                      <span className="block font-medium">
+                        {formatRomeDate(new Date(booking.startAt), {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                        –
+                        {formatRomeDate(new Date(booking.endAt), {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}{" "}
+                        {booking.serviceName}
+                      </span>
+                      <span className="block">{booking.customerName}</span>
+                    </button>
                     <select
                       value={booking.status}
                       className="mt-1 w-full rounded border border-line bg-paper"

@@ -224,6 +224,30 @@ body {
   }
 }
 
+@media print {
+  :root,
+  .dark {
+    --paper: #ffffff;
+    --surface: #ffffff;
+    --blush: #f6e3e3;
+    --ink: #1f1718;
+    --muted: #5c4a4c;
+    --mauve: #6e3a41;
+    --gold: #a8873c;
+    --line: #d9c2b5;
+  }
+
+  @page {
+    margin: 12mm;
+  }
+
+  body {
+    font-size: 12px;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .cart-fly,
   .cart-bounce,

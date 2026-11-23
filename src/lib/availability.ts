@@ -1,4 +1,4 @@
-import { and, eq, gte, lt, ne } from "drizzle-orm";
+import { and, gte, lt, ne } from "drizzle-orm";
 import { getDb } from "./db";
 import { blockedSlots, bookings, type Service } from "./db/schema";
 import { getStudioConfig, type WorkingHours } from "./settings";
@@ -17,7 +17,7 @@ function timeFromMinutes(total: number) {
   return `${hour}:${minute}`;
 }
 
-export async function getBusyRanges(from: Date, to: Date) {
+export async function getBusyRanges(from: Date, to: Date, excludeBookingId?: string) {
   const db = getDb();
   const [busyBookings, busyBlocks] = await Promise.all([
     db
@@ -28,6 +28,7 @@ export async function getBusyRanges(from: Date, to: Date) {
           ne(bookings.status, "cancelled"),
           lt(bookings.startAt, to),
           gte(bookings.endAt, from),
+          excludeBookingId ? ne(bookings.id, excludeBookingId) : undefined,
         ),
       ),
     db
@@ -113,19 +114,41 @@ export async function isSlotFree(
   end: Date,
   ignoreBookingId?: string,
 ) {
-  const busy = await getBusyRanges(start, end);
-  const db = getDb();
-  if (ignoreBookingId) {
-    const ignored = await db
-      .select()
-      .from(bookings)
-      .where(eq(bookings.id, ignoreBookingId));
-    const skip = ignored[0];
-    return !busy.some(
-      (range) =>
-        !(skip && range.start.getTime() === skip.startAt.getTime()) &&
-        overlaps(start, end, range.start, range.end),
-    );
-  }
+  const busy = await getBusyRanges(start, end, ignoreBookingId);
   return !busy.some((range) => overlaps(start, end, range.start, range.end));
+}
+
+export type FreeWindow = { start: string; end: string };
+
+/** Fasce libere di un giorno (orari di lavoro meno appuntamenti e blocchi), in ora di Roma. */
+export function freeWindowsForDay(options: {
+  dateStr: string;
+  workingHours: WorkingHours;
+  busy: { start: Date; end: Date }[];
+  minMinutes?: number;
+}) {
+  const weekday = fromRomeLocal(options.dateStr, "12:00").getDay();
+  const windows = options.workingHours[String(weekday)] ?? [];
+  const minMs = (options.minMinutes ?? 15) * 60_000;
+  const result: FreeWindow[] = [];
+
+  for (const window of windows) {
+    let cursor = fromRomeLocal(options.dateStr, window.start);
+    const windowEnd = fromRomeLocal(options.dateStr, window.end);
+    const busy = options.busy
+      .filter((range) => overlaps(cursor, windowEnd, range.start, range.end))
+      .sort((a, b) => a.start.getTime() - b.start.getTime());
+
+    for (const range of busy) {
+      if (range.start.getTime() - cursor.getTime() >= minMs) {
+        result.push({ start: toRomeParts(cursor).time, end: toRomeParts(range.start).time });
+      }
+      if (range.end > cursor) cursor = range.end;
+    }
+    if (windowEnd.getTime() - cursor.getTime() >= minMs) {
+      result.push({ start: toRomeParts(cursor).time, end: toRomeParts(windowEnd).time });
+    }
+  }
+
+  return result;
 }

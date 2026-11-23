@@ -12,7 +12,7 @@ export async function Footer() {
   const href = `https://www.instagram.com/${handle}/`;
 
   return (
-    <footer className="mt-auto border-t border-line bg-surface">
+    <footer className="mt-auto border-t border-line bg-surface print:hidden">
       <div className="mx-auto max-w-6xl px-4 py-12">
         <div className="flex flex-col items-center text-center">
           <Logo />

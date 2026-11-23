@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { asc, eq } from "drizzle-orm";
 import { BookingForm } from "@/components/booking-form";
+import { issueFormToken, recaptchaSiteKey } from "@/lib/anti-spam";
 import { JsonLd } from "@/components/json-ld";
 import { SectionHeading } from "@/components/section-heading";
 import { getDb } from "@/lib/db";
@@ -54,6 +55,8 @@ export default async function PrenotaPage() {
         <BookingForm
           services={rows.filter((row) => !row.isAddon)}
           extras={rows.filter((row) => row.isAddon)}
+          formToken={issueFormToken()}
+          recaptchaSiteKey={recaptchaSiteKey()}
         />
       </div>
     </div>

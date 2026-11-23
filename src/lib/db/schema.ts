@@ -88,6 +88,8 @@ export const bookings = mysqlTable(
   {
     id: varchar("id", { length: 64 }).primaryKey(),
     customerName: varchar("customer_name", { length: 255 }).notNull(),
+    firstName: varchar("first_name", { length: 120 }).notNull().default(""),
+    lastName: varchar("last_name", { length: 120 }).notNull().default(""),
     email: varchar("email", { length: 255 }).notNull(),
     phone: varchar("phone", { length: 64 }).notNull().default(""),
     serviceId: varchar("service_id", { length: 64 }).references(() => services.id, {
@@ -100,12 +102,14 @@ export const bookings = mysqlTable(
     extras: json("extras").$type<BookingExtra[]>().notNull(),
     status: varchar("status", { length: 32 }).notNull().default("pending"),
     source: varchar("source", { length: 32 }).notNull().default("site"),
+    ipHash: varchar("ip_hash", { length: 64 }),
     icalUid: varchar("ical_uid", { length: 255 }),
     createdAt: datetime("created_at", { mode: "date", fsp: 3 }).notNull().$defaultFn(() => new Date()),
   },
   (table) => [
     index("idx_bookings_start").on(table.startAt),
     index("idx_bookings_status").on(table.status),
+    index("idx_bookings_ip_created").on(table.ipHash, table.createdAt),
   ],
 );
 

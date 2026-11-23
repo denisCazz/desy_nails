@@ -1,44 +1,102 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import Script from "next/script";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { formatPrice } from "@/lib/format";
 import type { Service } from "@/lib/db/schema";
 
 type Availability = { date: string; slots: string[] };
 
+type Grecaptcha = {
+  ready: (callback: () => void) => void;
+  execute: (siteKey: string, options: { action: string }) => Promise<string>;
+};
+
+declare global {
+  interface Window {
+    grecaptcha?: Grecaptcha;
+  }
+}
+
+function recaptchaToken(siteKey: string) {
+  return new Promise<string>((resolve, reject) => {
+    const grecaptcha = window.grecaptcha;
+    if (!grecaptcha) {
+      reject(new Error("reCAPTCHA non caricato"));
+      return;
+    }
+    grecaptcha.ready(() => {
+      grecaptcha.execute(siteKey, { action: "booking" }).then(resolve, reject);
+    });
+  });
+}
+
+const inputClass = "rounded-xl border border-line bg-paper px-3 py-2";
+
 export function BookingForm({
   services,
   extras,
+  formToken,
+  recaptchaSiteKey,
 }: {
   services: Service[];
   extras: Service[];
+  formToken: string;
+  recaptchaSiteKey: string;
 }) {
+  const formRef = useRef<HTMLFormElement>(null);
   const bookable = services.filter((service) => service.bookable && service.active);
   const [serviceId, setServiceId] = useState(bookable[0]?.id ?? "");
   const [extraIds, setExtraIds] = useState<string[]>([]);
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
-  const [availability, setAvailability] = useState<Availability[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
+  const [loaded, setLoaded] = useState<{ key: string; days: Availability[] }>({
+    key: "",
+    days: [],
+  });
+  const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
   const selected = bookable.find((service) => service.id === serviceId);
+  const totalMinutes =
+    (selected?.durationMinutes ?? 0) +
+    extras
+      .filter((extra) => extraIds.includes(extra.id))
+      .reduce((sum, extra) => sum + extra.durationMinutes, 0);
+
+  const requestKey = `${serviceId}:${reloadKey}`;
+  const loading = Boolean(serviceId) && loaded.key !== requestKey;
+  const availability = loaded.key === requestKey ? loaded.days : [];
 
   useEffect(() => {
     if (!serviceId) return;
+    let cancelled = false;
+    fetch(`/api/availability?serviceId=${encodeURIComponent(serviceId)}`)
+      .then((res) => res.json() as Promise<{ days?: Availability[]; error?: string }>)
+      .then((data) => {
+        if (cancelled) return;
+        if (data.error) setError(data.error);
+        setLoaded({ key: requestKey, days: data.days ?? [] });
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setError("Impossibile caricare gli orari.");
+        setLoaded({ key: requestKey, days: [] });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [serviceId, requestKey]);
+
+  const reloadAvailability = useCallback(() => setReloadKey((key) => key + 1), []);
+
+  function chooseService(id: string) {
+    setServiceId(id);
     setDate("");
     setTime("");
-    setLoading(true);
-    fetch(`/api/availability?serviceId=${encodeURIComponent(serviceId)}`)
-      .then((res) => res.json())
-      .then((data: { days?: Availability[]; error?: string }) => {
-        if (data.error) setError(data.error);
-        else setAvailability(data.days ?? []);
-      })
-      .catch(() => setError("Impossibile caricare gli orari."))
-      .finally(() => setLoading(false));
-  }, [serviceId]);
+  }
 
   const daySlots = useMemo(
     () => availability.find((day) => day.date === date)?.slots ?? [],
@@ -47,36 +105,73 @@ export function BookingForm({
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (submitting) return;
     setError("");
     setMessage("");
+    setSubmitting(true);
     const form = new FormData(event.currentTarget);
-    const payload = {
-      serviceId,
-      extraIds,
-      date,
-      time,
-      customerName: String(form.get("customerName") ?? ""),
-      email: String(form.get("email") ?? ""),
-      phone: String(form.get("phone") ?? ""),
-      notes: String(form.get("notes") ?? ""),
-    };
-    const res = await fetch("/api/bookings", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    const data = (await res.json()) as { error?: string; ok?: boolean };
-    if (!res.ok) {
-      setError(data.error ?? "Prenotazione non riuscita.");
-      return;
+
+    try {
+      let captcha = "";
+      if (recaptchaSiteKey) {
+        try {
+          captcha = await recaptchaToken(recaptchaSiteKey);
+        } catch {
+          setError("Verifica anti-bot non disponibile. Disattiva eventuali blocchi e ricarica la pagina.");
+          return;
+        }
+      }
+
+      const payload = {
+        serviceId,
+        extraIds,
+        date,
+        time,
+        firstName: String(form.get("firstName") ?? ""),
+        lastName: String(form.get("lastName") ?? ""),
+        email: String(form.get("email") ?? ""),
+        phone: String(form.get("phone") ?? ""),
+        notes: String(form.get("notes") ?? ""),
+        website: String(form.get("website") ?? ""),
+        formToken,
+        recaptchaToken: captcha,
+      };
+      const res = await fetch("/api/bookings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = (await res.json().catch(() => ({}))) as { error?: string; ok?: boolean };
+      if (!res.ok) {
+        setError(data.error ?? "Prenotazione non riuscita.");
+        if (res.status === 409) {
+          setTime("");
+          reloadAvailability();
+        }
+        return;
+      }
+      setMessage("Richiesta inviata! Ti ho mandato un'email di riepilogo: ti confermerò l'appuntamento al più presto.");
+      formRef.current?.reset();
+      setExtraIds([]);
+      setDate("");
+      setTime("");
+      reloadAvailability();
+    } catch {
+      setError("Connessione non riuscita. Riprova.");
+    } finally {
+      setSubmitting(false);
     }
-    setMessage("Richiesta inviata. Ti confermerò l’appuntamento al più presto.");
-    event.currentTarget.reset();
-    setTime("");
   }
 
   return (
-    <form onSubmit={onSubmit} className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
+    <form ref={formRef} onSubmit={onSubmit} className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
+      {recaptchaSiteKey ? (
+        <Script
+          src={`https://www.google.com/recaptcha/api.js?render=${encodeURIComponent(recaptchaSiteKey)}`}
+          strategy="afterInteractive"
+        />
+      ) : null}
+
       <div className="space-y-6">
         <fieldset>
           <legend className="font-serif text-2xl text-mauve">Scegli il servizio</legend>
@@ -94,7 +189,7 @@ export function BookingForm({
                     name="service"
                     className="sr-only"
                     checked={serviceId === service.id}
-                    onChange={() => setServiceId(service.id)}
+                    onChange={() => chooseService(service.id)}
                   />
                   <span className="block font-medium">{service.name}</span>
                   <span className="text-sm text-muted">
@@ -145,7 +240,13 @@ export function BookingForm({
 
       <div className="gold-border rounded-3xl bg-surface p-6">
         <h3 className="font-serif text-2xl text-mauve">Quando</h3>
+        {totalMinutes > 0 ? (
+          <p className="mt-1 text-sm text-muted">Durata stimata: {totalMinutes} min</p>
+        ) : null}
         {loading ? <p className="mt-3 text-sm text-muted">Carico gli slot…</p> : null}
+        {!loading && availability.length === 0 ? (
+          <p className="mt-3 text-sm text-muted">Nessun orario libero nelle prossime settimane.</p>
+        ) : null}
         <div className="mt-4 grid max-h-48 grid-cols-2 gap-2 overflow-auto sm:grid-cols-3">
           {availability.map((day) => (
             <button
@@ -189,40 +290,96 @@ export function BookingForm({
         )}
 
         <div className="mt-6 grid gap-3">
-          <input
-            required
-            name="customerName"
-            placeholder="Nome e cognome"
-            className="rounded-xl border border-line bg-paper px-3 py-2"
-          />
+          <div className="grid gap-3 sm:grid-cols-2">
+            <input
+              required
+              name="firstName"
+              autoComplete="given-name"
+              placeholder="Nome"
+              minLength={2}
+              maxLength={60}
+              className={inputClass}
+            />
+            <input
+              required
+              name="lastName"
+              autoComplete="family-name"
+              placeholder="Cognome"
+              minLength={2}
+              maxLength={60}
+              className={inputClass}
+            />
+          </div>
           <input
             required
             type="email"
             name="email"
+            autoComplete="email"
             placeholder="Email"
-            className="rounded-xl border border-line bg-paper px-3 py-2"
+            maxLength={255}
+            className={inputClass}
           />
           <input
+            required
+            type="tel"
             name="phone"
+            autoComplete="tel"
+            inputMode="tel"
             placeholder="Telefono"
-            className="rounded-xl border border-line bg-paper px-3 py-2"
+            pattern="[+]?[0-9 ().\-]{8,20}"
+            title="Inserisci un numero di telefono valido"
+            className={inputClass}
           />
           <textarea
             name="notes"
             placeholder="Note (forma, colore, richieste)"
             rows={3}
-            className="rounded-xl border border-line bg-paper px-3 py-2"
+            maxLength={1000}
+            className={inputClass}
           />
+          <div aria-hidden="true" className="absolute -left-[9999px] h-px w-px overflow-hidden">
+            <label>
+              Sito web
+              <input type="text" name="website" tabIndex={-1} autoComplete="off" />
+            </label>
+          </div>
+          <label className="flex items-start gap-2 text-xs text-muted">
+            <input required type="checkbox" name="privacy" className="mt-0.5" />
+            <span>
+              Acconsento al trattamento dei miei dati per la gestione della prenotazione.
+            </span>
+          </label>
         </div>
         <button
           type="submit"
-          disabled={!selected || !date || !time}
+          disabled={!selected || !date || !time || submitting}
           className="mt-5 w-full rounded-full bg-gold py-3 font-medium text-[#3a2c2e] disabled:opacity-50"
         >
-          Invia richiesta
+          {submitting ? "Invio in corso…" : "Invia richiesta"}
         </button>
-        {error ? <p className="mt-3 text-sm text-rose-700 dark:text-rose">{error}</p> : null}
-        {message ? <p className="mt-3 text-sm text-mauve">{message}</p> : null}
+        {error ? (
+          <p role="alert" className="mt-3 text-sm text-rose-700 dark:text-rose">
+            {error}
+          </p>
+        ) : null}
+        {message ? (
+          <p role="status" className="mt-3 text-sm text-mauve">
+            {message}
+          </p>
+        ) : null}
+        {recaptchaSiteKey ? (
+          <p className="mt-4 text-[0.7rem] leading-snug text-muted">
+            Protetto da reCAPTCHA: si applicano la{" "}
+            <a href="https://policies.google.com/privacy" className="underline" target="_blank" rel="noreferrer">
+              Privacy Policy
+            </a>{" "}
+            e i{" "}
+            <a href="https://policies.google.com/terms" className="underline" target="_blank" rel="noreferrer">
+              Termini di servizio
+            </a>{" "}
+            di Google.
+          </p>
+        ) : null}
       </div>
     </form>
   );

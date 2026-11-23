@@ -2,10 +2,22 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CalendarDays, LayoutDashboard, ListOrdered, LogOut, Scissors, Settings, ShoppingBag } from "lucide-react";
+import {
+  CalendarCheck,
+  CalendarDays,
+  LayoutDashboard,
+  ListOrdered,
+  LogOut,
+  Printer,
+  Scissors,
+  Settings,
+  ShoppingBag,
+} from "lucide-react";
 
 const links = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/admin/prenotazioni", label: "Appuntamenti", icon: CalendarCheck },
+  { href: "/admin/disponibilita", label: "Disponibilità", icon: Printer },
   { href: "/admin/ordini", label: "Ordini", icon: ListOrdered },
   { href: "/admin/servizi", label: "Servizi", icon: Scissors },
   { href: "/admin/prodotti", label: "Shop", icon: ShoppingBag },
@@ -16,7 +28,7 @@ const links = [
 export function AdminNav() {
   const pathname = usePathname();
   return (
-    <nav className="flex gap-2 overflow-auto border-b border-line pb-3 md:flex-col md:border-b-0 md:border-r md:pr-6">
+    <nav className="flex gap-2 overflow-auto border-b border-line pb-3 md:flex-col md:border-b-0 md:border-r md:pr-6 print:hidden">
       {links.map((link) => (
         <Link
           key={link.href}
