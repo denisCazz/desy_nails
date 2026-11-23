@@ -1,5 +1,7 @@
 import { and, asc, gte, lt, ne } from "drizzle-orm";
+import { ArrowRight } from "lucide-react";
 import Link from "next/link";
+import { INSTAGRAM_GRADIENT, InstagramIcon } from "@/components/icons/instagram-icon";
 import { PrintButton } from "@/components/admin/print-button";
 import { freeWindowsForDay, getBusyRanges } from "@/lib/availability";
 import { getDb } from "@/lib/db";
@@ -76,16 +78,26 @@ export default async function AdminAvailabilityPage({
     <div>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3 print:hidden">
         <h2 className="font-serif text-3xl text-mauve">Disponibilità</h2>
-        <div className="flex flex-wrap gap-2">
-          <Link
-            href={`/admin/disponibilita/locandina?dal=${fromDate}`}
-            className="rounded-full border border-gold px-4 py-2 text-sm"
-          >
-            Locandina social
-          </Link>
-          <PrintButton label="Stampa disponibilità" />
-        </div>
+        <PrintButton label="Stampa disponibilità" />
       </div>
+
+      <Link
+        href={`/admin/disponibilita/locandina?dal=${fromDate}`}
+        className={`${INSTAGRAM_GRADIENT} group mb-6 flex items-center gap-4 rounded-2xl p-4 text-white shadow-lg shadow-[#dd2a7b]/20 transition hover:shadow-xl hover:shadow-[#dd2a7b]/30 sm:p-5 print:hidden`}
+      >
+        <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-white/20 ring-1 ring-white/40 sm:size-14">
+          <InstagramIcon className="size-7 sm:size-8" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-lg font-semibold leading-tight sm:text-xl">
+            Crea la locandina per Instagram
+          </span>
+          <span className="block text-sm text-white/85">
+            Storia 1080×1920 con gli orari liberi e quelli già prenotati, in PNG o PDF
+          </span>
+        </span>
+        <ArrowRight className="size-6 shrink-0 transition group-hover:translate-x-1" aria-hidden="true" />
+      </Link>
 
       <form className="gold-border mb-8 flex flex-wrap items-end gap-3 rounded-2xl bg-surface p-4 text-sm print:hidden">
         <label>

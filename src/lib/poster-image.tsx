@@ -172,7 +172,7 @@ export async function renderPosterPng(data: PosterData, siteHost: string) {
   const totalDays = data.weeks.reduce((sum, week) => sum + week.days.length, 0);
   const maxSlots = Math.max(1, ...data.weeks.flatMap((week) => week.days.map((day) => day.slots.length)));
   const available = POSTER_SIZE.height - 470 - 190 - data.weeks.length * 110;
-  const rowHeight = Math.max(64, Math.min(112, Math.floor(available / Math.max(1, totalDays))));
+  const rowHeight = Math.max(64, Math.min(150, Math.floor(available / Math.max(1, totalDays))));
   const slotFont = Math.floor(Math.max(21, Math.min(32, 650 / (maxSlots * 3.15))));
 
   return new ImageResponse(
@@ -218,7 +218,7 @@ export async function renderPosterPng(data: PosterData, siteHost: string) {
           </Divider>
         </div>
 
-        <div style={{ display: "flex", flexDirection: "column", width: "100%", flex: 1 }}>
+        <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", width: "100%", flex: 1, paddingBottom: 30 }}>
           {data.weeks.map((week, index) => (
             <div key={week.label + index} style={{ display: "flex", flexDirection: "column", marginTop: 26 }}>
               <Divider>

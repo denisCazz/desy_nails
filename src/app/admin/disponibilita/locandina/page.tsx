@@ -1,4 +1,6 @@
+import { FileDown } from "lucide-react";
 import Link from "next/link";
+import { INSTAGRAM_GRADIENT, InstagramIcon } from "@/components/icons/instagram-icon";
 import { mondayOf, POSTER_STEP_OPTIONS, POSTER_WEEK_OPTIONS } from "@/lib/poster";
 import { addMinutes, fromRomeLocal, toRomeParts } from "@/lib/time";
 
@@ -89,11 +91,19 @@ export default async function AdminPosterPage({
           height={960}
           className="gold-border w-full max-w-[420px] rounded-2xl"
         />
-        <div className="flex flex-col gap-3">
-          <a href={src("png", true)} className="rounded-full bg-gold px-6 py-3 text-center text-[#3a2c2e]">
-            Scarica immagine (PNG)
+        <div className="flex w-full max-w-sm flex-col gap-3">
+          <a
+            href={src("png", true)}
+            className={`${INSTAGRAM_GRADIENT} flex items-center justify-center gap-3 rounded-2xl px-6 py-4 text-lg font-semibold text-white shadow-lg shadow-[#dd2a7b]/25 transition hover:shadow-xl hover:shadow-[#dd2a7b]/35`}
+          >
+            <InstagramIcon className="size-7" />
+            Scarica per Instagram
           </a>
-          <a href={src("pdf", true)} className="rounded-full border border-gold px-6 py-3 text-center">
+          <a
+            href={src("pdf", true)}
+            className="flex items-center justify-center gap-2 rounded-2xl border border-gold px-6 py-3 text-center"
+          >
+            <FileDown className="size-5" aria-hidden="true" />
             Scarica PDF
           </a>
           <p className="max-w-xs text-xs text-muted">
