@@ -91,7 +91,7 @@ export function BookingEditor({
       const res = await fetch(`/api/admin/bookings/${booking.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, force, notify }),
+        body: JSON.stringify({ ...form, force, notify: notify && Boolean(form.email) }),
       });
       const data = (await res.json()) as {
         booking?: Booking;
@@ -144,7 +144,7 @@ export function BookingEditor({
         <div className="grid gap-2 sm:grid-cols-2">
           <label className="text-sm">
             Email
-            <input required type="email" value={form.email} onChange={(e) => set("email")(e.target.value)} className={field} />
+            <input type="email" value={form.email} onChange={(e) => set("email")(e.target.value)} className={field} />
           </label>
           <label className="text-sm">
             Telefono
@@ -210,9 +210,16 @@ export function BookingEditor({
             Extra: {booking.extras.map((extra) => extra.name).join(", ")}
           </p>
         ) : null}
-        <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" checked={notify} onChange={(e) => setNotify(e.target.checked)} />
-          Avvisa la cliente via email{timesChanged ? " del nuovo orario" : ""}
+        <label className={`flex items-center gap-2 text-sm ${form.email ? "" : "text-muted"}`}>
+          <input
+            type="checkbox"
+            disabled={!form.email}
+            checked={notify && Boolean(form.email)}
+            onChange={(e) => setNotify(e.target.checked)}
+          />
+          {form.email
+            ? `Avvisa la cliente via email${timesChanged ? " del nuovo orario" : ""}`
+            : "Aggiungi un'email per poter avvisare la cliente"}
         </label>
 
         {error ? (

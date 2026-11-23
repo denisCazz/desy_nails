@@ -140,9 +140,11 @@ export function BookingsList({ bookings }: { bookings: Booking[] }) {
                     {booking.extras.length > 0 ? ` + ${booking.extras.map((extra) => extra.name).join(", ")}` : ""}
                   </p>
                   <p className="flex flex-wrap gap-x-4 text-xs text-muted">
-                    <a href={`mailto:${booking.email}`} className="inline-flex items-center gap-1 hover:text-mauve">
-                      <Mail className="size-3" /> {booking.email}
-                    </a>
+                    {booking.email ? (
+                      <a href={`mailto:${booking.email}`} className="inline-flex items-center gap-1 hover:text-mauve">
+                        <Mail className="size-3" /> {booking.email}
+                      </a>
+                    ) : null}
                     {booking.phone ? (
                       <a href={`tel:${booking.phone}`} className="inline-flex items-center gap-1 hover:text-mauve">
                         <Phone className="size-3" /> {booking.phone}

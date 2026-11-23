@@ -15,7 +15,7 @@ const schema = z.object({
   status: z.enum(STATUSES).optional(),
   firstName: z.string().trim().min(1).max(120).optional(),
   lastName: z.string().trim().max(120).optional(),
-  email: z.string().trim().toLowerCase().max(255).pipe(z.email()).optional(),
+  email: z.string().trim().toLowerCase().max(255).pipe(z.union([z.literal(""), z.email()])).optional(),
   phone: z.string().trim().max(64).optional(),
   serviceName: z.string().trim().min(1).max(255).optional(),
   notes: z.string().max(2000).optional(),
@@ -48,7 +48,7 @@ export async function PATCH(
   if (data.status) update.status = data.status;
   if (data.serviceName) update.serviceName = data.serviceName;
   if (data.notes !== undefined) update.notes = data.notes;
-  if (data.email) update.email = data.email;
+  if (data.email !== undefined) update.email = data.email;
   if (data.phone !== undefined) update.phone = normalizePhone(data.phone);
   if (data.firstName !== undefined || data.lastName !== undefined) {
     const firstName = data.firstName ?? current.firstName;
@@ -84,7 +84,7 @@ export async function PATCH(
   const [booking] = await db.select().from(bookings).where(eq(bookings.id, id));
 
   let notified = false;
-  if (data.notify) {
+  if (data.notify && booking.email) {
     const result = await sendBookingUpdateEmail(booking).catch((error) => {
       console.error("[email] avviso modifica fallito", error);
       return { sent: false };
