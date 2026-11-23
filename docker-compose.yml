@@ -10,9 +10,8 @@ services:
       RESEND_API_KEY: ${RESEND_API_KEY:-}
       EMAIL_FROM: ${EMAIL_FROM:-Desy Nails <prenotazioni@bitora.it>}
       STUDIO_EMAIL: ${STUDIO_EMAIL:-tropini.desi06@gmail.com}
-      RECAPTCHA_SITE_KEY: ${RECAPTCHA_SITE_KEY:-}
-      RECAPTCHA_SECRET_KEY: ${RECAPTCHA_SECRET_KEY:-}
-      RECAPTCHA_MIN_SCORE: ${RECAPTCHA_MIN_SCORE:-0.5}
+      TURNSTILE_SITE_KEY: ${TURNSTILE_SITE_KEY:-}
+      TURNSTILE_SECRET_KEY: ${TURNSTILE_SECRET_KEY:-}
       APP_URL: ${APP_URL:-http://localhost:3000}
     volumes:
       - product_uploads:/app/data/uploads

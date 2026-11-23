@@ -8,7 +8,7 @@ import {
   isDisposableEmail,
   rateLimit,
   verifyFormToken,
-  verifyRecaptcha,
+  verifyTurnstile,
 } from "@/lib/anti-spam";
 import { getBusyRanges, isSlotFree, slotsForDay } from "@/lib/availability";
 import { pushBookingToCalDav } from "@/lib/caldav";
@@ -36,7 +36,7 @@ const schema = z.object({
   notes: z.string().trim().max(1000).optional().default(""),
   website: z.string().optional().default(""),
   formToken: z.string().max(200),
-  recaptchaToken: z.string().max(4000).optional().default(""),
+  captchaToken: z.string().max(4000).optional().default(""),
 });
 
 function tooMany(message: string) {
@@ -74,7 +74,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: message }, { status: 400 });
   }
 
-  const captcha = await verifyRecaptcha(data.recaptchaToken, ip, "booking");
+  const captcha = await verifyTurnstile(data.captchaToken, ip, "booking");
   if (!captcha.ok) {
     return NextResponse.json(
       { error: "Verifica anti-bot non superata. Ricarica la pagina e riprova." },

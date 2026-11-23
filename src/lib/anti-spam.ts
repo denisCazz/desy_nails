@@ -99,51 +99,79 @@ export function isDisposableEmail(email: string) {
   return DISPOSABLE_DOMAINS.has(domain);
 }
 
-export function recaptchaSiteKey() {
-  return process.env.RECAPTCHA_SITE_KEY ?? "";
+export function turnstileSiteKey() {
+  return process.env.TURNSTILE_SITE_KEY?.trim() ?? "";
 }
 
-type RecaptchaResult = {
-  success: boolean;
-  score?: number;
+function allowedHostnames() {
+  const configured = (process.env.TURNSTILE_HOSTNAMES ?? "")
+    .split(",")
+    .map((host) => host.trim().toLowerCase())
+    .filter(Boolean);
+  if (configured.length > 0) return new Set(configured);
+  const appHost = new URL(process.env.APP_URL || "https://desynails.it").hostname;
+  return new Set([appHost, `www.${appHost.replace(/^www\./, "")}`, "localhost"]);
+}
+
+const TOKEN_TTL_MS = 5 * 60 * 1000;
+const usedTokens = new Map<string, number>();
+
+/** Siteverify non rifiuta sempre un token riusato: i replay vengono bloccati qui. */
+function claimToken(token: string, now = Date.now()) {
+  for (const [used, expiresAt] of usedTokens) {
+    if (expiresAt <= now) usedTokens.delete(used);
+  }
+  if (usedTokens.has(token)) return false;
+  usedTokens.set(token, now + TOKEN_TTL_MS);
+  return true;
+}
+
+type SiteverifyResult = {
+  success?: boolean;
   action?: string;
   hostname?: string;
   "error-codes"?: string[];
+  metadata?: { result_with_testing_key?: boolean };
 };
 
-export async function verifyRecaptcha(token: string, ip: string, expectedAction: string) {
-  const secretKey = process.env.RECAPTCHA_SECRET_KEY;
+export async function verifyTurnstile(token: string, ip: string, expectedAction: string) {
+  const secretKey = process.env.TURNSTILE_SECRET_KEY?.trim();
   if (!secretKey) {
-    console.warn("[anti-spam] RECAPTCHA_SECRET_KEY assente: verifica reCAPTCHA saltata");
+    console.warn("[anti-spam] TURNSTILE_SECRET_KEY assente: verifica captcha saltata");
     return { ok: true, skipped: true };
   }
-  if (!token) return { ok: false, skipped: false };
+  if (!token || token.length > 2048) return { ok: false, skipped: false };
+  if (!claimToken(token)) {
+    console.warn("[anti-spam] token Turnstile riusato", { ip });
+    return { ok: false, skipped: false };
+  }
 
   const body = new URLSearchParams({ secret: secretKey, response: token });
   if (ip !== "unknown") body.set("remoteip", ip);
 
   try {
-    const res = await fetch("https://www.google.com/recaptcha/api/siteverify", {
+    const res = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
       method: "POST",
       body,
-      signal: AbortSignal.timeout(8_000),
+      signal: AbortSignal.timeout(10_000),
     });
-    const data = (await res.json()) as RecaptchaResult;
-    const minScore = Number(process.env.RECAPTCHA_MIN_SCORE ?? 0.5);
-    const ok =
-      data.success &&
-      data.action === expectedAction &&
-      (data.score ?? 0) >= minScore;
-    if (!ok) {
-      console.warn("[anti-spam] reCAPTCHA rifiutato", {
-        score: data.score,
-        action: data.action,
-        errors: data["error-codes"],
-      });
+    if (!res.ok) throw new Error(`siteverify ${res.status}`);
+    const data = (await res.json()) as SiteverifyResult;
+    if (!data.success) {
+      console.warn("[anti-spam] Turnstile rifiutato", data["error-codes"]);
+      return { ok: false, skipped: false };
     }
-    return { ok, skipped: false, score: data.score };
+    if (data.metadata?.result_with_testing_key) return { ok: true, skipped: false };
+    if (data.action !== expectedAction || !allowedHostnames().has(data.hostname ?? "")) {
+      console.warn("[anti-spam] token Turnstile non corrispondente", {
+        action: data.action,
+        hostname: data.hostname,
+      });
+      return { ok: false, skipped: false };
+    }
+    return { ok: true, skipped: false };
   } catch (error) {
-    console.error("[anti-spam] reCAPTCHA non raggiungibile", error);
+    console.error("[anti-spam] Turnstile non raggiungibile", error);
     return { ok: false, skipped: false };
   }
 }

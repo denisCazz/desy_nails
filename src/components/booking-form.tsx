@@ -1,35 +1,11 @@
 "use client";
 
-import Script from "next/script";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { TurnstileWidget } from "@/components/turnstile-widget";
 import { formatPrice } from "@/lib/format";
 import type { Service } from "@/lib/db/schema";
 
 type Availability = { date: string; slots: string[] };
-
-type Grecaptcha = {
-  ready: (callback: () => void) => void;
-  execute: (siteKey: string, options: { action: string }) => Promise<string>;
-};
-
-declare global {
-  interface Window {
-    grecaptcha?: Grecaptcha;
-  }
-}
-
-function recaptchaToken(siteKey: string) {
-  return new Promise<string>((resolve, reject) => {
-    const grecaptcha = window.grecaptcha;
-    if (!grecaptcha) {
-      reject(new Error("reCAPTCHA non caricato"));
-      return;
-    }
-    grecaptcha.ready(() => {
-      grecaptcha.execute(siteKey, { action: "booking" }).then(resolve, reject);
-    });
-  });
-}
 
 const inputClass = "rounded-xl border border-line bg-paper px-3 py-2";
 
@@ -37,12 +13,12 @@ export function BookingForm({
   services,
   extras,
   formToken,
-  recaptchaSiteKey,
+  captchaSiteKey,
 }: {
   services: Service[];
   extras: Service[];
   formToken: string;
-  recaptchaSiteKey: string;
+  captchaSiteKey: string;
 }) {
   const formRef = useRef<HTMLFormElement>(null);
   const bookable = services.filter((service) => service.bookable && service.active);
@@ -56,6 +32,8 @@ export function BookingForm({
     days: [],
   });
   const [submitting, setSubmitting] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [captchaReset, setCaptchaReset] = useState(0);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
@@ -112,14 +90,9 @@ export function BookingForm({
     const form = new FormData(event.currentTarget);
 
     try {
-      let captcha = "";
-      if (recaptchaSiteKey) {
-        try {
-          captcha = await recaptchaToken(recaptchaSiteKey);
-        } catch {
-          setError("Verifica anti-bot non disponibile. Disattiva eventuali blocchi e ricarica la pagina.");
-          return;
-        }
+      if (captchaSiteKey && !captchaToken) {
+        setError("Completa la verifica anti-bot qui sopra.");
+        return;
       }
 
       const payload = {
@@ -134,7 +107,7 @@ export function BookingForm({
         notes: String(form.get("notes") ?? ""),
         website: String(form.get("website") ?? ""),
         formToken,
-        recaptchaToken: captcha,
+        captchaToken: captchaToken ?? "",
       };
       const res = await fetch("/api/bookings", {
         method: "POST",
@@ -160,18 +133,12 @@ export function BookingForm({
       setError("Connessione non riuscita. Riprova.");
     } finally {
       setSubmitting(false);
+      if (captchaSiteKey) setCaptchaReset((key) => key + 1);
     }
   }
 
   return (
     <form ref={formRef} onSubmit={onSubmit} className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
-      {recaptchaSiteKey ? (
-        <Script
-          src={`https://www.google.com/recaptcha/api.js?render=${encodeURIComponent(recaptchaSiteKey)}`}
-          strategy="afterInteractive"
-        />
-      ) : null}
-
       <div className="space-y-6">
         <fieldset>
           <legend className="font-serif text-2xl text-mauve">Scegli il servizio</legend>
@@ -350,9 +317,19 @@ export function BookingForm({
             </span>
           </label>
         </div>
+        {captchaSiteKey ? (
+          <div className="mt-4">
+            <TurnstileWidget
+              siteKey={captchaSiteKey}
+              action="booking"
+              resetKey={captchaReset}
+              onTokenChange={setCaptchaToken}
+            />
+          </div>
+        ) : null}
         <button
           type="submit"
-          disabled={!selected || !date || !time || submitting}
+          disabled={!selected || !date || !time || submitting || (Boolean(captchaSiteKey) && !captchaToken)}
           className="mt-5 w-full rounded-full bg-gold py-3 font-medium text-[#3a2c2e] disabled:opacity-50"
         >
           {submitting ? "Invio in corso…" : "Invia richiesta"}
@@ -365,19 +342,6 @@ export function BookingForm({
         {message ? (
           <p role="status" className="mt-3 text-sm text-mauve">
             {message}
-          </p>
-        ) : null}
-        {recaptchaSiteKey ? (
-          <p className="mt-4 text-[0.7rem] leading-snug text-muted">
-            Protetto da reCAPTCHA: si applicano la{" "}
-            <a href="https://policies.google.com/privacy" className="underline" target="_blank" rel="noreferrer">
-              Privacy Policy
-            </a>{" "}
-            e i{" "}
-            <a href="https://policies.google.com/terms" className="underline" target="_blank" rel="noreferrer">
-              Termini di servizio
-            </a>{" "}
-            di Google.
           </p>
         ) : null}
       </div>
