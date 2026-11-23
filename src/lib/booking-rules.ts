@@ -1,0 +1,1 @@
+export const DEFAULT_MIN_NOTICE_HOURS = 24;

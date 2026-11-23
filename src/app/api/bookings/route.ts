@@ -153,6 +153,7 @@ export async function POST(request: Request) {
     durationMinutes: service.durationMinutes,
     interval: config.slotInterval,
     bufferMinutes: config.bufferMinutes,
+    minNoticeMinutes: config.minNoticeHours * 60,
     workingHours: config.workingHours,
     busy: await getBusyRanges(dayStart, addMinutes(dayStart, 24 * 60)),
     now,

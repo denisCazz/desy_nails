@@ -1,4 +1,5 @@
 import { and, asc, gte, lt, ne } from "drizzle-orm";
+import Link from "next/link";
 import { PrintButton } from "@/components/admin/print-button";
 import { freeWindowsForDay, getBusyRanges } from "@/lib/availability";
 import { getDb } from "@/lib/db";
@@ -75,7 +76,15 @@ export default async function AdminAvailabilityPage({
     <div>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3 print:hidden">
         <h2 className="font-serif text-3xl text-mauve">Disponibilità</h2>
-        <PrintButton label="Stampa disponibilità" />
+        <div className="flex flex-wrap gap-2">
+          <Link
+            href={`/admin/disponibilita/locandina?dal=${fromDate}`}
+            className="rounded-full border border-gold px-4 py-2 text-sm"
+          >
+            Locandina social
+          </Link>
+          <PrintButton label="Stampa disponibilità" />
+        </div>
       </div>
 
       <form className="gold-border mb-8 flex flex-wrap items-end gap-3 rounded-2xl bg-surface p-4 text-sm print:hidden">

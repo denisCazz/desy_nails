@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { getDb } from "./db";
 import { settings } from "./db/schema";
+import { DEFAULT_MIN_NOTICE_HOURS } from "./booking-rules";
 
 export type DayHours = { start: string; end: string }[];
 export type WorkingHours = Record<string, DayHours>;
@@ -72,6 +73,7 @@ export async function getStudioConfig() {
     timezone: all.timezone ?? "Europe/Rome",
     slotInterval: Number(all.slot_interval ?? 30),
     bufferMinutes: Number(all.buffer_minutes ?? 0),
+    minNoticeHours: Number(all.min_notice_hours ?? DEFAULT_MIN_NOTICE_HOURS),
     calendarToken: all.calendar_token ?? "",
     caldavUrl: all.caldav_url ?? "",
     caldavUsername: all.caldav_username ?? "",

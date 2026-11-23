@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { DEFAULT_MIN_NOTICE_HOURS } from "@/lib/booking-rules";
 
 export function SettingsForm({
   settings,
@@ -44,6 +45,8 @@ export function SettingsForm({
         caldav_password: String(form.get("caldav_password") ?? ""),
         caldav_calendar_url: String(form.get("caldav_calendar_url") ?? ""),
         working_hours: JSON.stringify(workingHours),
+        min_notice_hours: String(form.get("min_notice_hours") ?? ""),
+        buffer_minutes: String(form.get("buffer_minutes") ?? ""),
       }),
     });
     setMessage(res.ok ? "Salvato." : "Salvataggio non riuscito.");
@@ -104,6 +107,46 @@ export function SettingsForm({
           placeholder="URL calendario (opzionale)"
           className="w-full rounded-xl border border-line bg-paper px-3 py-2"
         />
+      </section>
+
+      <section className="gold-border space-y-3 rounded-2xl bg-surface p-5 lg:col-span-2">
+        <h3 className="font-serif text-xl text-mauve">Regole di prenotazione</h3>
+        <div className="grid gap-3 text-sm md:grid-cols-2">
+          <label className="flex items-center justify-between gap-3">
+            <span>
+              Preavviso minimo (ore)
+              <span className="block text-xs text-muted">
+                Le clienti non possono prenotare un orario che inizia prima di queste ore.
+              </span>
+            </span>
+            <input
+              type="number"
+              name="min_notice_hours"
+              min={0}
+              max={336}
+              step={1}
+              defaultValue={settings.min_notice_hours ?? String(DEFAULT_MIN_NOTICE_HOURS)}
+              className="w-24 rounded-lg border border-line bg-paper px-2 py-1"
+            />
+          </label>
+          <label className="flex items-center justify-between gap-3">
+            <span>
+              Pausa tra appuntamenti (minuti)
+              <span className="block text-xs text-muted">
+                Tempo libero lasciato dopo ogni appuntamento prima del successivo.
+              </span>
+            </span>
+            <input
+              type="number"
+              name="buffer_minutes"
+              min={0}
+              max={120}
+              step={5}
+              defaultValue={settings.buffer_minutes ?? "0"}
+              className="w-24 rounded-lg border border-line bg-paper px-2 py-1"
+            />
+          </label>
+        </div>
       </section>
 
       <section className="gold-border space-y-3 rounded-2xl bg-surface p-5 lg:col-span-2">

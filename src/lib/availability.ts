@@ -48,13 +48,15 @@ export function slotsForDay(options: {
   durationMinutes: number;
   interval: number;
   bufferMinutes: number;
+  /** Preavviso minimo: niente slot che iniziano prima di adesso + questi minuti. */
+  minNoticeMinutes?: number;
   workingHours: WorkingHours;
   busy: { start: Date; end: Date }[];
   now?: Date;
 }) {
   const weekday = fromRomeLocal(options.dateStr, "12:00").getDay();
   const windows = options.workingHours[String(weekday)] ?? [];
-  const now = options.now ?? new Date();
+  const earliest = addMinutes(options.now ?? new Date(), options.minNoticeMinutes ?? 0);
   const slots: string[] = [];
 
   for (const window of windows) {
@@ -71,9 +73,9 @@ export function slotsForDay(options: {
         start,
         options.durationMinutes + options.bufferMinutes,
       );
-      if (start <= now) continue;
+      if (start < earliest) continue;
       const taken = options.busy.some((range) =>
-        overlaps(start, end, range.start, range.end),
+        overlaps(start, end, range.start, addMinutes(range.end, options.bufferMinutes)),
       );
       if (!taken) slots.push(time);
     }
@@ -98,6 +100,7 @@ export async function getAvailability(service: Service, days = 28) {
       durationMinutes: service.durationMinutes,
       interval: config.slotInterval,
       bufferMinutes: config.bufferMinutes,
+      minNoticeMinutes: config.minNoticeHours * 60,
       workingHours: config.workingHours,
       busy,
     });
