@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Great_Vibes, Outfit, Playfair_Display } from "next/font/google";
+import Script from "next/script";
 import { CartDrawer } from "@/components/cart-drawer";
 import { CartProvider } from "@/components/cart-provider";
 import { Footer } from "@/components/footer";
@@ -115,6 +116,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             <Footer />
           </CartProvider>
         </ThemeProvider>
+        <Script
+          src="https://umami.bitora.it/script.js"
+          data-website-id="e2f12410-582c-4e7d-89a4-8a61538f728b"
+          data-domains="desynails.it,www.desynails.it"
+          strategy="afterInteractive"
+        />
       </body>
     </html>
   );
